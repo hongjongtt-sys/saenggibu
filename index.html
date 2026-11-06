@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>생기부 작성기</title>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--line:#dde2e8;--text:#1f2933;--muted:#6b7785;--pri:#2f5bea;--pri-soft:#e9effd;--ok:#16794a;--ok-soft:#e5f5ec;--warn:#a86a00;--warn-soft:#fff3d6;--bad:#cf2a3c;--bad-soft:#fde8ea}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.topbar{display:flex;align-items:center;gap:6px;padding:8px 14px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:16px;margin-right:6px}
+.fileinfo{color:var(--muted);font-size:13px}
+.auto{color:var(--muted);font-size:12px;margin-left:8px}
+.recent{margin:-6px 0 14px}
+.recent button{padding:9px 16px;font-size:14px;border-color:var(--pri);color:var(--pri)}
+.dirty{color:var(--bad);font-weight:700;margin-left:4px}
+.spacer{flex:1}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;color:var(--text);white-space:nowrap}
+button:hover{background:#eef1f5}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+button.pri:hover{filter:brightness(1.07)}
+button.sm{padding:2px 7px;font-size:12px}
+button.danger{color:var(--bad)}
+button.on{background:var(--pri-soft);border-color:var(--pri);color:var(--pri);font-weight:700}
+.tabs{display:flex;gap:2px;padding:0 8px;overflow-x:auto}
+.tab{border:none;border-bottom:3px solid transparent;border-radius:0;padding:9px 14px;background:none}
+.tab:hover{background:#f5f7fa}
+.tab.on{border-bottom-color:var(--pri);color:var(--pri);font-weight:700}
+main{max-width:980px;margin:0 auto;padding:14px 14px 80px}
+h2{font-size:16px;margin:0}
+.sec{margin-bottom:22px}
+.sec-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.hint{color:var(--muted);font-size:13px;margin:4px 0 10px;line-height:1.6}
+.muted{color:var(--muted);font-size:13px}
+.empty{padding:26px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:10px}
+.guide{background:#fff;border:1px solid var(--line);border-left:4px solid var(--pri);border-radius:8px;padding:10px 14px;margin-bottom:18px;line-height:1.75;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;scroll-margin-top:110px}
+.card-h{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fb;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-b{padding:10px 12px}
+.stu{font-weight:800;font-size:15px}
+.title-in{font:inherit;font-weight:700;border:1px solid transparent;border-radius:5px;padding:3px 6px;background:transparent;min-width:120px}
+.title-in:hover,.title-in:focus{border-color:var(--line);background:#fff}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}
+input[type=text],input[type=number],input[type=password],select{font:inherit;border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:#fff}
+textarea{width:100%;min-height:56px;resize:vertical;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:inherit;line-height:1.65;background:#fff;overflow:hidden}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--pri-soft);border-color:var(--pri)}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.toolbar .grp{display:flex;gap:4px;align-items:center}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:0 2px 12px;font-size:13px}
+.pill{padding:2px 9px;border-radius:99px;background:#eef1f5;color:var(--muted)}
+.pill.bad{background:var(--bad-soft);color:var(--bad);font-weight:700}
+.pill.warn{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.act{padding:8px 12px;border-bottom:1px dashed var(--line)}
+.act:last-child{border-bottom:none}
+.act.checked{background:#fbfcff}
+.act-h{display:flex;align-items:center;gap:6px;margin-bottom:5px;flex-wrap:wrap}
+.chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+.chk input{width:17px;height:17px}
+.tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--warn-soft);color:var(--warn)}
+.bytes{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bytes.over{color:var(--bad);font-weight:800}
+.bytes.ok{color:var(--ok)}
+.badge{font-size:12px;padding:2px 8px;border-radius:5px;background:#eef1f5;color:var(--muted)}
+.badge.man{background:var(--pri-soft);color:var(--pri);font-weight:700}
+.badge.warn{background:var(--warn-soft);color:var(--warn);font-weight:700}
+.mfoot{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.warnbox{background:var(--warn-soft);border-radius:6px;padding:7px 10px;margin-bottom:7px;font-size:13px;color:#6b4a00}
+.warnbox details{margin-top:4px}
+.warnbox pre{white-space:pre-wrap;font:inherit;background:#fff;border-radius:5px;padding:6px 8px;margin:5px 0 0}
+.msec{padding:4px 0 12px}.msec+.msec{border-top:1px dashed var(--line);padding-top:12px}
+.msec-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}.msec-h b{font-size:14px}
+.hiddenrow{padding:6px 12px;font-size:12px;color:var(--muted);background:#fafafa}
+.stbl{border-collapse:collapse;width:100%;max-width:520px;margin-top:8px}
+.stbl th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:3px 4px;border-bottom:1px solid var(--line)}
+.stbl td{padding:2px 4px}
+.stbl input{width:100%}
+.paste{display:flex;gap:8px;align-items:stretch}
+.paste textarea{min-height:80px;overflow:auto;font-size:13px}
+.paste .col{display:flex;flex-direction:column;gap:5px}
+.actlist{display:flex;flex-direction:column;gap:4px;margin:6px 0 8px}
+.actitem{display:flex;gap:5px;align-items:center}
+.actitem .num{width:22px;color:var(--muted);font-size:12px;text-align:right}
+.actitem input{flex:1;max-width:380px}
+.typebadge{font-size:11px;padding:2px 7px;border-radius:4px;background:#eef1f5;color:var(--muted);font-weight:600}
+.links{display:flex;gap:10px;flex-wrap:wrap}
+.links label{display:flex;gap:4px;align-items:center;cursor:pointer}
+.welcome{max-width:520px;margin:70px auto;text-align:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:34px 26px}
+.welcome h1{font-size:22px;margin:0 0 8px}
+.welcome .btns{display:flex;gap:10px;justify-content:center;margin:22px 0 14px}
+.welcome .btns button{padding:10px 18px;font-size:15px}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.42);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal.hidden{display:none}
+.mbox{background:#fff;border-radius:12px;padding:20px;width:min(380px,92vw)}
+.mbox h3{margin:0 0 6px;font-size:16px}
+.mbox input{width:100%;margin:5px 0}
+.mbtns{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2933;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200}
+#toast.show{opacity:.95}
+#printArea{display:none}
+#dropOverlay{position:fixed;inset:0;z-index:150;background:rgba(47,91,234,.12);border:4px dashed var(--pri);display:none;align-items:center;justify-content:center;pointer-events:none}
+#dropOverlay.show{display:flex}
+#dropOverlay div{background:#fff;padding:18px 28px;border-radius:12px;font-size:17px;font-weight:700;color:var(--pri);box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.dropzone{margin-top:12px;padding:16px;border:2px dashed var(--line);border-radius:10px;color:var(--muted);font-size:13px}
+@media (max-width:640px){.paste{flex-direction:column}}
+@media print{
+  @page{size:A4;margin:12mm}
+  header,main,#toast,.modal{display:none!important}
+  body{background:#fff;font-size:11pt}
+  #printArea{display:block}
+  .ptitle{font-size:13pt;font-weight:800;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #333}
+  .pcard{break-inside:avoid;page-break-inside:avoid;padding:8px 0 10px;border-bottom:1.5px dashed #888;position:relative}
+  .pcard::after{content:"✂";position:absolute;right:0;bottom:-9px;font-size:10pt;background:#fff;padding-left:4px;color:#666}
+  .phead{display:flex;justify-content:space-between;font-weight:800;margin-bottom:4px}
+  .pact{margin:4px 0 6px;padding-left:2px}
+  .pact .pn{font-weight:700}
+  .pact .pt{white-space:pre-wrap;line-height:1.6;margin:2px 0 0 22px}
+  .pb{font-weight:400;font-size:9pt;color:#555}
+  .pmemo{border:1px solid #bbb;height:34px;margin-top:4px;border-radius:3px;font-size:8pt;color:#999;padding:2px 4px}
+}
+</style>
+</head>
+<body>
+<header id="hdr"></header>
+<main id="main"></main>
+<div id="printArea"></div>
+<div id="toast"></div>
+<div id="dropOverlay"><div>📂 여기에 놓으면 파일을 엽니다</div></div>
+<input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+
+<div id="modal" class="modal hidden"><div class="mbox">
+  <h3 id="mTitle"></h3>
+  <p id="mDesc" class="hint"></p>
+  <input type="password" id="mPw1" placeholder="비밀번호">
+  <input type="password" id="mPw2" placeholder="비밀번호 확인">
+  <div class="mbtns">
+    <button id="mClear" class="danger">비밀번호 해제</button>
+    <span class="spacer"></span>
+    <button id="mCancel">취소</button>
+    <button id="mOk" class="pri">확인</button>
+  </div>
+</div></div>
+
+<script>
+/* ================= 기본 유틸 ================= */
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-3);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TE=new TextEncoder(), TD=new TextDecoder();
+const fmt=n=>n.toLocaleString('ko-KR');
+
+/* 나이스 바이트: 한글 3, 영문·숫자·공백 1, 줄바꿈(엔터) 2 */
+function nb(s){
+  if(!s) return 0;
+  s=String(s).replace(/\r\n?/g,'\n');
+  const nl=(s.match(/\n/g)||[]).length;
+  return TE.encode(s).length+nl;
+}
+
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800);}
+
+/* ================= 상태 ================= */
+let DB=null;            // 현재 연도 파일 데이터
+let UI={tab:'settings',cls:{},view:{},filter:{}};
+let OPEN={};            // 설정 화면 펼침 상태
+let fileHandle=null, fileName='', password=null, dirty=false;
+const FSA=!!window.showSaveFilePicker;
+let RECENT=null;            // {handle,name} — 파일 위치만 기억, 내용은 저장 안 함
+let AUTOSAVE=true, lastSaved=null, needPerm=false, saving=false;
+try{AUTOSAVE=localStorage.getItem('sgb_autosave')!=='0';}catch{}
+
+/* 최근 파일 위치 기억 (IndexedDB, 내용 없이 파일 핸들만) */
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('sgb-writer',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function kvGet(k){try{const db=await idb();return await new Promise(res=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(undefined);});}catch{return undefined;}}
+async function kvSet(k,v){try{const db=await idb();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=res;});}catch{}}
+async function kvDel(k){try{const db=await idb();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=res;t.onerror=res;});}catch{}}
+async function rememberHandle(h){if(!h)return;RECENT={handle:h,name:h.name};await kvSet('recent',RECENT);}
+async function forgetRecent(){await kvDel('recent');RECENT=null;render();toast('최근 파일 기억을 지웠습니다');}
+async function reopenRecent(){
+  if(!RECENT)return;
+  const h=RECENT.handle;
+  try{
+    let p=await h.queryPermission({mode:'read'});
+    if(p!=='granted') p=await h.requestPermission({mode:'read'});
+    if(p!=='granted'){toast('파일 접근이 허용되지 않았습니다');return;}
+    const f=await h.getFile();
+    if(await loadText(await f.text(),f.name)){fileHandle=h;await checkPerm();}
+  }catch(e){alert('최근 파일을 찾을 수 없습니다.\nUSB가 꽂혀 있는지 확인하거나 [파일 열기]로 직접 골라 주세요.');}
+}
+
+/* 자동 저장 */
+async function checkPerm(){
+  try{needPerm=fileHandle?(await fileHandle.queryPermission({mode:'readwrite'}))!=='granted':false;}catch{needPerm=true;}
+  updAuto();
+}
+async function grantPerm(){
+  if(!fileHandle)return;
+  try{needPerm=(await fileHandle.requestPermission({mode:'readwrite'}))!=='granted';}catch{needPerm=true;}
+  updAuto();
+  if(!needPerm){toast('자동 저장을 시작합니다');if(dirty)saveFile(false,true);}
+}
+function setAutosave(on){AUTOSAVE=on;try{localStorage.setItem('sgb_autosave',on?'1':'0');}catch{}updAuto();toast(on?'자동 저장을 켰습니다':'자동 저장을 껐습니다');}
+function updAuto(){
+  const el=$('#autoMark');if(!el)return;
+  let t='';
+  if(!FSA) t='';
+  else if(!AUTOSAVE) t='자동 저장 꺼짐';
+  else if(!fileHandle) t='자동 저장: 처음 한 번 저장하면 시작';
+  else if(needPerm){el.innerHTML=`자동 저장 대기 · <a href="#" onclick="grantPerm();return false">덮어쓰기 허용하기</a> (또는 Ctrl+S)`;return;}
+  else t='자동 저장 켜짐'+(lastSaved?` · ${lastSaved.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 저장`:'');
+  el.textContent=t;
+}
+async function autoSaveTick(){
+  if(!AUTOSAVE||!DB||!dirty||!fileHandle||saving) return;
+  if(!$('#modal').classList.contains('hidden')) return;
+  try{
+    if(await fileHandle.queryPermission({mode:'readwrite'})!=='granted'){needPerm=true;updAuto();return;}
+  }catch{return;}
+  needPerm=false;
+  await saveFile(false,true);
+}
+setInterval(autoSaveTick,180000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')autoSaveTick();});
+
+function newDB(year, copyFrom){
+  const db={app:'saenggibu-writer',ver:1,year:year,rosters:[],areas:[],data:{}};
+  if(copyFrom){
+    db.rosters=JSON.parse(JSON.stringify(copyFrom.rosters));
+    db.areas=JSON.parse(JSON.stringify(copyFrom.areas));
+  }else{
+    db.areas=[
+      {id:uid(),type:'activity',name:'자율',rosterIds:[],acts:[],limit:1500,inFinal:true},
+      {id:uid(),type:'activity',name:'동아리',rosterIds:[],acts:[],limit:1500},
+      {id:uid(),type:'activity',name:'진로',rosterIds:[],acts:[],limit:1500,inFinal:true},
+      {id:uid(),type:'single',name:'행발',rosterIds:[],acts:[],limit:1500}
+    ];
+  }
+  return db;
+}
+const area=id=>DB.areas.find(a=>a.id===id);
+const roster=id=>DB.rosters.find(r=>r.id===id);
+const sortedStudents=r=>[...r.students].sort((a,b)=>String(a.hakbun).localeCompare(String(b.hakbun),undefined,{numeric:true}));
+function sd(aid,sid){
+  DB.data[aid]??={};
+  const d=DB.data[aid][sid]??={acts:{},extra:[],hidden:[],merged:null,text:''};
+  d.acts??={};d.extra??=[];d.hidden??=[];
+  return d;
+}
+function actsFor(a,d){
+  return [...a.acts.filter(x=>!d.hidden.includes(x.id)), ...d.extra.map(x=>({...x,extra:true}))];
+}
+function autoText(a,d){
+  return actsFor(a,d).map(x=>d.acts[x.id]).filter(v=>v&&v.checked&&v.text&&v.text.trim()).map(v=>v.text.trim()).join('\n');
+}
+function mergedState(a,d){
+  const auto=autoText(a,d), m=d.merged;
+  if(!m||!m.manual) return {text:auto,manual:false,warn:false,auto};
+  return {text:m.text,manual:true,warn:m.base!==auto,auto};
+}
+const finalAreas=()=>DB.areas.filter(a=>(a.type==='activity'||a.type==='single')&&a.inFinal);
+const finalText=(a,d)=>a.type==='single'?(d.text||''):mergedState(a,d).text;
+const finalStatus=(a,d)=>{if(a.type==='single')return '직접 작성';const ms=mergedState(a,d);return ms.warn?'원본 변경됨':ms.manual?'수정됨':'자동';};
+function finalRoster(){for(const a of finalAreas()){const r=a.rosterIds.map(roster).find(Boolean);if(r)return r;}return null;}
+function migrate(db){for(const a of db.areas){if(a.type==='activity'&&a.inFinal===undefined)a.inFinal=(a.name==='자율'||a.name==='진로');}}
+function touch(){dirty=true;const m=$('#dirtyMark');if(m)m.textContent='● 저장 안 됨';}
+function clean(){dirty=false;const m=$('#dirtyMark');if(m)m.textContent='';}
+
+/* ================= 렌더링 ================= */
+function render(){
+  renderHeader();
+  if(!DB){renderWelcome();return;}
+  if(UI.tab==='settings') renderSettings();
+  else if(UI.tab==='final'){if(finalAreas().length)renderFinal();else{UI.tab='settings';return render();}}
+  else{const a=area(UI.tab); if(!a){UI.tab='settings';return render();} renderArea(a);}
+  document.querySelectorAll('main textarea.grow').forEach(grow);
+}
+function go(tab){UI.tab=tab;render();window.scrollTo(0,0);}
+function grow(t){t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px';}
+
+function renderHeader(){
+  let t=`<div class="topbar"><span class="brand">📘 생기부 작성기</span>`;
+  if(DB) t+=`<span class="fileinfo"><b>${DB.year}학년도</b> · ${esc(fileName||'아직 저장 안 한 새 파일')} ${password?'🔒':''}<span id="dirtyMark" class="dirty">${dirty?'● 저장 안 됨':''}</span><span id="autoMark" class="auto"></span></span>`;
+  t+=`<span class="spacer"></span><button onclick="newFile()">새 학년도 파일</button><button onclick="openFile()">열기</button>`;
+  if(DB) t+=`<button onclick="saveFile(true)">다른 이름으로</button><button class="pri" onclick="saveFile(false)">저장 (Ctrl+S)</button>`;
+  t+='</div>';
+  if(DB){
+    t+='<nav class="tabs">';
+    t+=`<button class="tab ${UI.tab==='settings'?'on':''}" onclick="go('settings')">⚙️ 설정</button>`;
+    const fa=finalAreas(), lastF=fa[fa.length-1];
+    for(const a of DB.areas){
+      t+=`<button class="tab ${UI.tab===a.id?'on':''}" onclick="go('${a.id}')">${esc(a.name)}</button>`;
+      if(a===lastF) t+=`<button class="tab ${UI.tab==='final'?'on':''}" onclick="go('final')">📋 최종(${esc(fa.map(x=>x.name).join('·'))})</button>`;
+    }
+    t+='</nav>';
+  }
+  $('#hdr').innerHTML=t;
+  updAuto();
+}
+
+function renderWelcome(){
+  $('#main').innerHTML=`<div class="welcome">
+    <h1>📘 생기부 작성기</h1>
+    <div class="muted">나이스 기준 바이트 계산 · 인터넷 연결 없이 이 PC 안에서만 작동합니다</div>
+    <div class="btns"><button class="pri" onclick="newFile()">새 학년도 파일 만들기</button><button onclick="openFile()">파일 열기</button></div>
+    <div class="recent" id="recentBox">${RECENT?`<button onclick="reopenRecent()">↻ 최근 파일 다시 열기: <b>${esc(RECENT.name)}</b></button><div class="muted" style="margin-top:6px">USB가 꽂혀 있어야 열립니다 · <a href="#" onclick="forgetRecent();return false">기억 지우기</a></div>`:''}</div>
+    <div class="dropzone">📂 저장한 <b>.json</b> 파일을 이 창에 끌어다 놓아도 열립니다</div>
+    <div class="hint" style="margin-top:12px">작성 내용은 브라우저에 남지 않습니다.<br>작업 후 반드시 <b>저장</b>해서 USB 등에 보관하세요.</div>
+  </div>`;
+}
+
+/* ---------- 설정 화면 ---------- */
+function renderSettings(){
+  let h=`<div class="guide"><b>사용 순서</b> ① 명단 만들기(엑셀에서 학번·이름 붙여넣기) → ② 영역마다 명단 연결·활동 입력 → ③ 각 탭의 <b>✏️ 활동 입력</b>에서 작성 → 학생 확인용 인쇄 → 체크 → ④ <b>📋 병합</b>에서 최종 다듬고 나이스에 복사</div>`;
+
+  h+=`<section class="sec"><div class="sec-h"><h2>기본 정보</h2></div>
+    <div class="card"><div class="card-b"><div class="row">
+      <label>학년도 <input type="number" style="width:90px" value="${DB.year}" onchange="DB.year=(+this.value)||DB.year;touch();renderHeader()"></label>
+      <span class="muted">파일 비밀번호: ${password?'<b style="color:var(--ok)">설정됨 🔒</b>':'없음'}</span>
+      <button onclick="setPassword()">${password?'비밀번호 변경/해제':'비밀번호 설정'}</button>
+    </div><div class="row">
+      <label class="chk"><input type="checkbox" ${AUTOSAVE?'checked':''} ${FSA?'':'disabled'} onchange="setAutosave(this.checked)"> 자동 저장 (3분마다 같은 파일에 덮어쓰기)</label>
+      ${FSA?'':'<span class="muted">이 브라우저는 자동 저장을 지원하지 않습니다 (크롬·엣지에서 가능)</span>'}
+      ${RECENT?`<button class="sm" onclick="forgetRecent()">최근 파일 기억 지우기</button>`:''}
+    </div><div class="hint" style="margin:0">비밀번호를 설정하면 저장 파일이 암호화되어, 비밀번호 없이는 내용을 볼 수 없습니다. <b>비밀번호를 잊으면 복구할 수 없습니다.</b></div></div></div></section>`;
+
+  /* 명단 */
+  h+=`<section class="sec"><div class="sec-h"><h2>① 명단 관리</h2><span class="spacer"></span><button class="pri" onclick="addRoster()">+ 명단 추가</button></div>
+    <div class="hint">담임반·수업반·동아리 명단을 각각 만드세요. 엑셀에서 <b>학번 | 이름</b> 두 열을 복사해 붙여넣으면 됩니다. 같은 학번은 기존 작성 내용을 유지한 채 이름만 갱신됩니다.</div>`;
+  if(!DB.rosters.length) h+=`<div class="empty">아직 명단이 없습니다. [+ 명단 추가]를 눌러 시작하세요.</div>`;
+  for(const r of DB.rosters){
+    const used=DB.areas.filter(a=>a.rosterIds.includes(r.id)).map(a=>a.name);
+    const op=OPEN['r'+r.id];
+    h+=`<div class="card"><div class="card-h">
+      <input class="title-in" value="${esc(r.name)}" onchange="renameRoster('${r.id}',this.value)">
+      <span class="muted">${r.students.length}명 · 사용 영역: ${used.length?esc(used.join(', ')):'없음'}</span>
+      <span class="spacer"></span>
+      <button class="sm" onclick="toggleOpen('r${r.id}')">${op?'접기':'펼치기'}</button>
+      <button class="sm danger" onclick="delRoster('${r.id}')">삭제</button></div>`;
+    if(op){
+      h+=`<div class="card-b"><div class="paste">
+        <textarea id="paste_${r.id}" placeholder="엑셀에서 복사해 붙여넣기&#10;20301&#9;김철수&#10;20302&#9;이영희"></textarea>
+        <div class="col"><button class="pri" onclick="pasteRoster('${r.id}',false)">추가/갱신</button><button onclick="pasteRoster('${r.id}',true)">전체 교체</button></div></div>`;
+      if(r.students.length){
+        h+=`<table class="stbl"><thead><tr><th style="width:120px">학번</th><th>이름</th><th style="width:50px"></th></tr></thead><tbody>`;
+        for(const s of sortedStudents(r)) h+=`<tr><td><input type="text" value="${esc(s.hakbun)}" onchange="editStu('${r.id}','${s.id}','hakbun',this.value)"></td><td><input type="text" value="${esc(s.name)}" onchange="editStu('${r.id}','${s.id}','name',this.value)"></td><td><button class="sm danger" onclick="delStu('${r.id}','${s.id}')">삭제</button></td></tr>`;
+        h+=`</tbody></table>`;
+      }
+      h+=`<div style="margin-top:8px"><button class="sm" onclick="addStu('${r.id}')">+ 학생 1명 추가</button></div></div>`;
+    }
+    h+='</div>';
+  }
+  h+='</section>';
+
+  /* 영역 */
+  h+=`<section class="sec"><div class="sec-h"><h2>② 영역 관리</h2><span class="spacer"></span>
+      <button class="pri" onclick="addArea('subject')">+ 과목</button><button onclick="addArea('activity')">+ 활동형 영역</button><button onclick="addArea('single')">+ 단일칸 영역</button></div>
+    <div class="hint"><b>과목</b>은 여러 반 명단을 연결할 수 있고, 활동 목록은 모든 반에 공통으로 적용됩니다. <b>활동형</b>(자율·동아리·진로)은 명단 1개에 활동 여러 개, <b>단일칸</b>(행발)은 학생별 칸 하나입니다. 바이트 한도는 학교 기준에 맞게 고쳐 주세요.</div>`;
+  DB.areas.forEach((a,i)=>{
+    const op=OPEN['a'+a.id];
+    const tl={subject:'과목',activity:'활동형',single:'단일칸'}[a.type];
+    h+=`<div class="card"><div class="card-h">
+      <input class="title-in" value="${esc(a.name)}" onchange="setArea('${a.id}','name',this.value)">
+      <span class="typebadge">${tl}</span>
+      <span class="muted">${a.type==='single'?'':'활동 '+a.acts.length+'개 · '}명단: ${a.rosterIds.map(id=>roster(id)?.name).filter(Boolean).map(esc).join(', ')||'<b style="color:var(--bad)">미연결</b>'}</span>
+      <span class="spacer"></span>
+      <button class="sm" ${i===0?'disabled':''} onclick="moveArea('${a.id}',-1)">◀</button><button class="sm" ${i===DB.areas.length-1?'disabled':''} onclick="moveArea('${a.id}',1)">▶</button>
+      <button class="sm" onclick="toggleOpen('a${a.id}')">${op?'접기':'펼치기'}</button>
+      <button class="sm danger" onclick="delArea('${a.id}')">삭제</button></div>`;
+    if(op){
+      h+=`<div class="card-b">
+        <div class="row"><label>바이트 한도 <input type="number" style="width:100px" value="${a.limit}" onchange="setArea('${a.id}','limit',this.value)"> B</label><span class="muted">(${fmt(Math.floor(a.limit/3))}자 내외, 한글 기준)</span></div>
+        <div class="row"><b>명단 연결</b></div>`;
+      if(!DB.rosters.length) h+=`<div class="muted">먼저 ① 명단을 만드세요.</div>`;
+      else if(a.type==='subject'){
+        h+=`<div class="links">${DB.rosters.map(r=>`<label><input type="checkbox" ${a.rosterIds.includes(r.id)?'checked':''} onchange="linkRoster('${a.id}','${r.id}',this.checked)"> ${esc(r.name)}</label>`).join('')}</div>`;
+      }else{
+        h+=`<select onchange="setRosterOne('${a.id}',this.value)"><option value="">— 선택 —</option>${DB.rosters.map(r=>`<option value="${r.id}" ${a.rosterIds[0]===r.id?'selected':''}>${esc(r.name)} (${r.students.length}명)</option>`).join('')}</select>`;
+      }
+      if(a.type==='single') h+=`<div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" ${a.inFinal?'checked':''} onchange="area('${a.id}').inFinal=this.checked;touch();render()"> <b>📋 최종 탭</b>에도 함께 보이기</label><span class="muted">(이 탭은 그대로 두고, 최종 탭에서도 같은 내용을 보고 고칠 수 있음)</span></div>`;
+      if(a.type==='activity') h+=`<div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" ${a.inFinal?'checked':''} onchange="area('${a.id}').inFinal=this.checked;touch();render()"> 병합을 <b>📋 최종 탭</b>으로 모으기</label><span class="muted">(체크 해제 시 이 탭 안에 병합 보기가 생김)</span></div>`;
+      if(a.type!=='single'){
+        h+=`<div class="row" style="margin-top:12px"><b>활동 목록</b><span class="muted">모든 학생에게 공통 적용 (학생별 추가·숨기기는 작성 화면에서)</span></div><div class="actlist">`;
+        a.acts.forEach((x,j)=>{
+          h+=`<div class="actitem"><span class="num">${j+1}</span><input type="text" value="${esc(x.name)}" onchange="renameAct('${a.id}','${x.id}',this.value)">
+            <button class="sm" ${j===0?'disabled':''} onclick="moveAct('${a.id}','${x.id}',-1)">▲</button><button class="sm" ${j===a.acts.length-1?'disabled':''} onclick="moveAct('${a.id}','${x.id}',1)">▼</button>
+            <button class="sm danger" onclick="delAct('${a.id}','${x.id}')">삭제</button></div>`;
+        });
+        if(!a.acts.length) h+=`<div class="muted">아직 활동이 없습니다.</div>`;
+        h+=`</div><div class="paste"><textarea id="acts_${a.id}" style="min-height:60px" placeholder="활동 이름을 한 줄에 하나씩&#10;예) 독서토론&#10;탐구보고서"></textarea><div class="col"><button class="pri" onclick="addActs('${a.id}')">활동 추가</button></div></div>`;
+      }
+      h+='</div>';
+    }
+    h+='</div>';
+  });
+  h+='</section>';
+  $('#main').innerHTML=h;
+}
+function toggleOpen(k){OPEN[k]=!OPEN[k];render();}
+
+/* ---------- 명단 조작 ---------- */
+function parseRoster(txt){
+  const out=[];
+  for(const line of txt.split(/\r?\n/)){
+    const parts=line.trim().split(/\t|,|\s+/).filter(Boolean);
+    if(parts.length<2||!/^\d+$/.test(parts[0])) continue;   // 머리글 줄 등은 건너뜀
+    out.push({hakbun:parts[0],name:parts.slice(1).join(' ')});
+  }
+  return out;
+}
+function addRoster(){
+  const name=prompt('명단 이름을 입력하세요 (예: 2-3, 2-1, 수학탐구반)');
+  if(!name||!name.trim())return;
+  const r={id:uid(),name:name.trim(),students:[]};
+  DB.rosters.push(r);OPEN['r'+r.id]=true;touch();render();
+}
+function renameRoster(id,v){if(v.trim())roster(id).name=v.trim();touch();render();}
+function purgeStudent(sid){for(const aid in DB.data) delete DB.data[aid][sid];}
+function delRoster(id){
+  const r=roster(id), used=DB.areas.filter(a=>a.rosterIds.includes(id));
+  if(!confirm(`'${r.name}' 명단을 삭제할까요?${used.length?'\n연결된 영역: '+used.map(a=>a.name).join(', '):''}\n이 명단 학생들의 작성 내용도 함께 삭제됩니다.`))return;
+  r.students.forEach(s=>purgeStudent(s.id));
+  DB.rosters=DB.rosters.filter(x=>x!==r);
+  DB.areas.forEach(a=>a.rosterIds=a.rosterIds.filter(x=>x!==id));
+  touch();render();
+}
+function pasteRoster(id,replace){
+  const r=roster(id), ta=$('#paste_'+id), list=parseRoster(ta.value);
+  if(!list.length){alert('인식된 학생이 없습니다.\n한 줄에 학번(숫자)과 이름이 함께 있어야 합니다.');return;}
+  if(replace){
+    const keep=new Set(list.map(x=>x.hakbun));
+    const removed=r.students.filter(s=>!keep.has(String(s.hakbun)));
+    if(removed.length&&!confirm(`새 명단에 없는 ${removed.length}명(${removed.slice(0,5).map(s=>s.name).join(', ')}${removed.length>5?' 등':''})이 삭제되고 작성 내용도 지워집니다. 계속할까요?`))return;
+    removed.forEach(s=>purgeStudent(s.id));
+    r.students=r.students.filter(s=>keep.has(String(s.hakbun)));
+  }
+  let add=0,upd=0;
+  for(const x of list){
+    const ex=r.students.find(s=>String(s.hakbun)===x.hakbun);
+    if(ex){if(ex.name!==x.name){ex.name=x.name;upd++;}}
+    else{r.students.push({id:uid(),hakbun:x.hakbun,name:x.name});add++;}
+  }
+  ta.value='';touch();render();toast(`추가 ${add}명 · 이름 갱신 ${upd}명`);
+}
+function editStu(rid,sid,f,v){
+  const r=roster(rid), s=r.students.find(x=>x.id===sid); v=v.trim();
+  if(f==='hakbun'){
+    if(!/^\d+$/.test(v)){alert('학번은 숫자만 입력하세요.');render();return;}
+    if(r.students.some(x=>x.id!==sid&&String(x.hakbun)===v)){alert('같은 학번이 이미 있습니다.');render();return;}
+  }
+  s[f]=v;touch();render();
+}
+function delStu(rid,sid){
+  const r=roster(rid), s=r.students.find(x=>x.id===sid);
+  if(!confirm(`${s.hakbun} ${s.name} 학생을 삭제할까요? 작성 내용도 지워집니다.`))return;
+  r.students=r.students.filter(x=>x!==s);purgeStudent(sid);touch();render();
+}
+function addStu(rid){
+  const v=prompt('학번과 이름을 입력하세요 (예: 20315 홍길동)');if(!v)return;
+  const p=parseRoster(v);if(!p.length){alert('형식: 학번 이름');return;}
+  const r=roster(rid);
+  if(r.students.some(x=>String(x.hakbun)===p[0].hakbun)){alert('같은 학번이 이미 있습니다.');return;}
+  r.students.push({id:uid(),...p[0]});touch();render();
+}
+
+/* ---------- 영역 조작 ---------- */
+function addArea(type){
+  const q={subject:'과목 이름 (예: 확률과 통계)',activity:'영역 이름 (예: 봉사)',single:'영역 이름'}[type];
+  const name=prompt(q);if(!name||!name.trim())return;
+  const a={id:uid(),type,name:name.trim(),rosterIds:[],acts:[],limit:1500};
+  DB.areas.push(a);OPEN['a'+a.id]=true;touch();render();
+}
+function setArea(id,f,v){
+  const a=area(id);
+  if(f==='limit'){const n=parseInt(v,10);if(n>0)a.limit=n;}
+  else if(v.trim()) a[f]=v.trim();
+  touch();render();
+}
+function moveArea(id,d){
+  const i=DB.areas.findIndex(a=>a.id===id), j=i+d;if(j<0||j>=DB.areas.length)return;
+  [DB.areas[i],DB.areas[j]]=[DB.areas[j],DB.areas[i]];touch();render();
+}
+function delArea(id){
+  const a=area(id);
+  if(!confirm(`'${a.name}' 영역을 삭제할까요? 이 영역의 작성 내용이 모두 지워집니다.`))return;
+  DB.areas=DB.areas.filter(x=>x!==a);delete DB.data[id];touch();render();
+}
+function linkRoster(aid,rid,on){
+  const a=area(aid);
+  a.rosterIds=on?[...new Set([...a.rosterIds,rid])]:a.rosterIds.filter(x=>x!==rid);
+  touch();render();
+}
+function setRosterOne(aid,rid){
+  const a=area(aid);
+  if(a.rosterIds[0]&&a.rosterIds[0]!==rid&&!confirm('명단을 바꾸면 기존 명단 학생의 작성 내용은 화면에 나오지 않습니다(파일에는 남아 있음). 바꿀까요?')){render();return;}
+  a.rosterIds=rid?[rid]:[];touch();render();
+}
+function addActs(aid){
+  const a=area(aid), ta=$('#acts_'+aid);
+  const names=ta.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!names.length)return;
+  names.forEach(n=>a.acts.push({id:uid(),name:n}));
+  ta.value='';touch();render();
+}
+function renameAct(aid,xid,v){if(!v.trim())return render();area(aid).acts.find(x=>x.id===xid).name=v.trim();touch();render();}
+function moveAct(aid,xid,d){
+  const L=area(aid).acts, i=L.findIndex(x=>x.id===xid), j=i+d;if(j<0||j>=L.length)return;
+  [L[i],L[j]]=[L[j],L[i]];touch();render();
+}
+function delAct(aid,xid){
+  const a=area(aid), x=a.acts.find(v=>v.id===xid);
+  if(!confirm(`'${x.name}' 활동을 삭제할까요?\n모든 학생의 이 활동 내용도 함께 지워집니다.`))return;
+  a.acts=a.acts.filter(v=>v!==x);
+  for(const sid in (DB.data[aid]||{})){const d=DB.data[aid][sid];delete d.acts[xid];d.hidden=(d.hidden||[]).filter(h=>h!==xid);}
+  touch();render();
+}
+
+/* ---------- 작성 화면 ---------- */
+function curRoster(a){
+  const rids=a.rosterIds.filter(id=>roster(id));
+  if(!rids.length) return null;
+  let rid=rids[0];
+  if(a.type==='subject'&&rids.includes(UI.cls[a.id])) rid=UI.cls[a.id];
+  UI.cls[a.id]=rid;
+  return roster(rid);
+}
+function renderArea(a){
+  const r=curRoster(a);
+  if(!r){
+    $('#main').innerHTML=`<div class="empty">'${esc(a.name)}'에 연결된 명단이 없습니다.<br><br><button class="pri" onclick="OPEN['a${a.id}']=true;go('settings')">설정에서 명단 연결하기</button></div>`;
+    return;
+  }
+  const studs=sortedStudents(r);
+  const view=a.type==='single'?'single':(a.inFinal?'act':(UI.view[a.id]||'act'));
+  let filter=UI.filter[a.id]||'all';
+  if(filter!=='all'&&!a.acts.some(x=>x.id===filter)) filter=UI.filter[a.id]='all';
+
+  /* 툴바 */
+  let h=`<div class="toolbar">`;
+  if(a.type==='subject'){
+    const rids=a.rosterIds.filter(id=>roster(id));
+    h+=`<div class="grp">${rids.map(id=>`<button class="${id===r.id?'on':''}" onclick="UI.cls['${a.id}']='${id}';render()">${esc(roster(id).name)}</button>`).join('')}</div><span class="muted">|</span>`;
+  }else h+=`<span class="muted">명단: <b>${esc(r.name)}</b></span><span class="muted">|</span>`;
+  if(view!=='single'){
+    if(a.inFinal) h+=`<button onclick="go('final')">📋 병합은 최종 탭에서 →</button>`;
+    else h+=`<div class="grp"><button class="${view==='act'?'on':''}" onclick="setView('${a.id}','act')">✏️ 활동 입력</button><button class="${view==='merge'?'on':''}" onclick="setView('${a.id}','merge')">📋 병합</button></div>`;
+    if(view==='act') h+=`<select onchange="UI.filter['${a.id}']=this.value;render()"><option value="all">활동 전체 보기</option>${a.acts.map(x=>`<option value="${x.id}" ${filter===x.id?'selected':''}>${esc(x.name)}만 보기</option>`).join('')}</select>`;
+  }
+  h+=`<select onchange="jump(this.value);this.selectedIndex=0"><option value="">학생 바로가기…</option>${studs.map(s=>`<option value="${s.id}">${esc(s.hakbun)} ${esc(s.name)}</option>`).join('')}</select>`;
+  h+=`<span class="spacer"></span><button onclick="doPrint()">🖨 인쇄</button><button onclick="exportCSV()">⬇ 엑셀(CSV)</button></div>`;
+
+  /* 통계 */
+  let over=0,man=0,warn=0,empty=0;
+  for(const s of studs){
+    const d=sd(a.id,s.id);
+    if(a.type==='single'){const b=nb(d.text);if(b>a.limit)over++;if(!d.text.trim())empty++;continue;}
+    const ms=mergedState(a,d);if(nb(ms.text)>a.limit)over++;if(ms.manual)man++;if(ms.warn)warn++;if(!ms.text.trim())empty++;
+  }
+  h+=`<div class="stats"><span class="pill">${studs.length}명 · 한도 ${fmt(a.limit)}B</span>`;
+  h+=over?`<span class="pill bad">${view==='act'?'체크 합계 ':''}한도 초과 ${over}명</span>`:`<span class="pill ok">한도 초과 없음</span>`;
+  if(man) h+=`<span class="pill">✏️ 병합 수정 ${man}명</span>`;
+  if(warn) h+=`<span class="pill warn">⚠️ 원본 변경됨 ${warn}명</span>`;
+  if(empty) h+=`<span class="pill">미작성 ${empty}명</span>`;
+  h+=`</div>`;
+
+  if(view==='act'&&!a.acts.length) h+=`<div class="hint">공통 활동이 없습니다. <a href="#" onclick="OPEN['a${a.id}']=true;go('settings');return false">설정에서 활동 추가</a> 또는 학생별 [+ 개별 활동]을 쓰세요.</div>`;
+  if(!studs.length) h+=`<div class="empty">명단에 학생이 없습니다.</div>`;
+  for(const s of studs){
+    if(view==='act') h+=actCard(a,s,filter);
+    else if(view==='merge') h+=mergeCard(a,s);
+    else h+=singleCard(a,s);
+  }
+  $('#main').innerHTML=h;
+}
+function setView(aid,v){UI.view[aid]=v;render();window.scrollTo(0,0);}
+function jump(sid){if(!sid)return;const el=document.getElementById('c_'+sid);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+
+function actCard(a,s,filter){
+  const d=sd(a.id,s.id);
+  const list=actsFor(a,d).filter(x=>filter==='all'||x.id===filter);
+  const sum=nb(autoText(a,d));
+  let h=`<div class="card" id="c_${s.id}"><div class="card-h"><span class="stu">${esc(s.hakbun)} ${esc(s.name)}</span><span class="spacer"></span>
+    <span class="bytes ${sum>a.limit?'over':''}" id="sum_${s.id}">체크 합계 ${fmt(sum)} / ${fmt(a.limit)}B</span>
+    ${filter==='all'?`<button class="sm" onclick="addExtra('${a.id}','${s.id}')">+ 개별 활동</button>`:''}</div>`;
+  if(!list.length) h+=`<div class="hiddenrow">${filter==='all'?'활동이 없습니다.':'이 학생은 이 활동을 숨겼습니다.'}</div>`;
+  for(const x of list){
+    const v=d.acts[x.id]||{}, b=nb(v.text||'');
+    h+=`<div class="act ${v.checked?'checked':''}" id="row_${s.id}_${x.id}"><div class="act-h">
+      <label class="chk"><input type="checkbox" ${v.checked?'checked':''} onchange="setChk('${a.id}','${s.id}','${x.id}',this.checked)"><b>${esc(x.name)}</b></label>
+      ${x.extra?'<span class="tag">개별</span>':''}<span class="spacer"></span>
+      <span class="bytes ${b>a.limit?'over':''}" id="b_${s.id}_${x.id}">${fmt(b)}B</span>
+      ${x.extra?`<button class="sm" onclick="renameExtra('${a.id}','${s.id}','${x.id}')">이름</button><button class="sm danger" onclick="delExtra('${a.id}','${s.id}','${x.id}')">삭제</button>`
+               :`<button class="sm" title="이 학생에게서만 숨깁니다" onclick="hideAct('${a.id}','${s.id}','${x.id}')">숨기기</button>`}
+      </div><textarea class="grow" data-a="${a.id}" data-s="${s.id}" data-x="${x.id}" oninput="onActInput(this)" placeholder="${esc(x.name)} 내용 입력">${esc(v.text||'')}</textarea></div>`;
+  }
+  if(filter==='all'&&d.hidden.length){
+    const names=d.hidden.map(id=>a.acts.find(x=>x.id===id)?.name).filter(Boolean);
+    if(names.length) h+=`<div class="hiddenrow">숨긴 활동: ${esc(names.join(', '))} <button class="sm" onclick="unhide('${a.id}','${s.id}')">모두 복원</button></div>`;
+  }
+  return h+'</div>';
+}
+function updateSum(a,s){
+  const d=sd(a.id,s), sum=nb(autoText(a,d)), el=$('#sum_'+s);
+  if(el){el.textContent=`체크 합계 ${fmt(sum)} / ${fmt(a.limit)}B`;el.classList.toggle('over',sum>a.limit);}
+}
+function onActInput(t){
+  const a=area(t.dataset.a), s=t.dataset.s, x=t.dataset.x, d=sd(a.id,s);
+  (d.acts[x]??={text:'',checked:false}).text=t.value;
+  const b=nb(t.value), el=$(`#b_${s}_${x}`);
+  el.textContent=fmt(b)+'B';el.classList.toggle('over',b>a.limit);
+  updateSum(a,s);grow(t);touch();
+}
+function setChk(aid,sid,xid,on){
+  const a=area(aid), d=sd(aid,sid);
+  (d.acts[xid]??={text:'',checked:false}).checked=on;
+  $(`#row_${sid}_${xid}`)?.classList.toggle('checked',on);
+  updateSum(a,sid);touch();
+}
+function addExtra(aid,sid){
+  const n=prompt('이 학생에게만 추가할 활동 이름 (예: 교내 수학경시대회)');if(!n||!n.trim())return;
+  sd(aid,sid).extra.push({id:uid(),name:n.trim()});touch();render();
+}
+function renameExtra(aid,sid,xid){
+  const x=sd(aid,sid).extra.find(v=>v.id===xid), n=prompt('활동 이름',x.name);
+  if(!n||!n.trim())return;x.name=n.trim();touch();render();
+}
+function delExtra(aid,sid,xid){
+  const d=sd(aid,sid);if(!confirm('이 개별 활동과 내용을 삭제할까요?'))return;
+  d.extra=d.extra.filter(v=>v.id!==xid);delete d.acts[xid];touch();render();
+}
+function hideAct(aid,sid,xid){const d=sd(aid,sid);if(!d.hidden.includes(xid))d.hidden.push(xid);touch();render();}
+function unhide(aid,sid){sd(aid,sid).hidden=[];touch();render();}
+
+/* 병합 */
+function mergeBadge(ms){return ms.warn?'<span class="badge warn">⚠️ 원본 변경됨</span>':ms.manual?'<span class="badge man">✏️ 수정됨</span>':'<span class="badge">자동 병합</span>';}
+function mergeFoot(a,s,ms){
+  const b=nb(ms.text);
+  let h=`<span class="bytes ${b>a.limit?'over':'ok'}">${fmt(b)} / ${fmt(a.limit)}B ${b>a.limit?`(${fmt(b-a.limit)}B 초과)`:''}</span><span class="spacer"></span>`;
+  if(ms.manual) h+=`<button class="sm" onclick="remerge('${a.id}','${s}')">↺ 다시 병합 (수정 버리기)</button>`;
+  h+=`<button class="sm pri" onclick="copyMerged('${a.id}','${s}')">📋 복사</button>`;
+  return h;
+}
+function mergeSection(a,s,showName){
+  const d=sd(a.id,s.id), ms=mergedState(a,d), k=a.id+'_'+s.id;
+  let h=`<div class="msec"><div class="msec-h">${showName?`<b>${esc(a.name)}</b>`:''}<span id="mb_${k}">${mergeBadge(ms)}</span></div>`;
+  if(ms.warn) h+=`<div class="warnbox">수정한 뒤에 활동 내용이나 체크가 바뀌었습니다. 다시 병합하면 직접 수정한 내용은 사라집니다.
+    <details><summary>새 병합 결과 미리보기 (${fmt(nb(ms.auto))}B)</summary><pre>${esc(ms.auto)||'(체크된 활동 없음)'}</pre></details>
+    <div class="mfoot"><button class="sm" onclick="remerge('${a.id}','${s.id}')">새 결과로 다시 병합</button><button class="sm" onclick="keepMerge('${a.id}','${s.id}')">현재 수정본 유지</button></div></div>`;
+  h+=`<textarea class="grow" data-a="${a.id}" data-s="${s.id}" oninput="onMergeInput(this)" placeholder="${esc(a.name)} 활동 입력에서 체크한 활동이 여기에 합쳐집니다">${esc(ms.text)}</textarea>
+    <div class="mfoot" id="mf_${k}">${mergeFoot(a,s.id,ms)}</div></div>`;
+  return h;
+}
+function mergeCard(a,s){
+  return `<div class="card" id="c_${s.id}"><div class="card-h"><span class="stu">${esc(s.hakbun)} ${esc(s.name)}</span></div><div class="card-b">${mergeSection(a,s,false)}</div></div>`;
+}
+function onMergeInput(t){
+  const a=area(t.dataset.a), s=t.dataset.s, d=sd(a.id,s), k=a.id+'_'+s;
+  if(!d.merged||!d.merged.manual) d.merged={manual:true,base:autoText(a,d),text:t.value};
+  else d.merged.text=t.value;
+  const ms=mergedState(a,d);
+  $('#mb_'+k).innerHTML=mergeBadge(ms);$('#mf_'+k).innerHTML=mergeFoot(a,s,ms);
+  grow(t);touch();
+}
+
+/* 최종 탭 (자율·진로 병합 모음) */
+function renderFinal(){
+  const r=finalRoster(), fa=finalAreas().filter(a=>r&&a.rosterIds.includes(r.id));
+  if(!r){$('#main').innerHTML=`<div class="empty">최종 탭 영역(${esc(finalAreas().map(a=>a.name).join(', '))})에 연결된 명단이 없습니다.<br><br><button class="pri" onclick="go('settings')">설정으로</button></div>`;return;}
+  const other=finalAreas().filter(a=>!fa.includes(a));
+  const studs=sortedStudents(r);
+  let h=`<div class="toolbar"><span class="muted">명단: <b>${esc(r.name)}</b></span><span class="muted">|</span>
+    <select onchange="jump(this.value);this.selectedIndex=0"><option value="">학생 바로가기…</option>${studs.map(s=>`<option value="${s.id}">${esc(s.hakbun)} ${esc(s.name)}</option>`).join('')}</select>
+    <span class="spacer"></span><button onclick="doPrint()">🖨 인쇄</button><button onclick="exportCSV()">⬇ 엑셀(CSV)</button></div>`;
+  if(other.length) h+=`<div class="warnbox">${esc(other.map(a=>a.name).join(', '))}은(는) 명단이 '${esc(r.name)}'와 달라 여기 표시되지 않습니다. 설정에서 같은 명단으로 연결하세요.</div>`;
+  h+=`<div class="stats">`;
+  for(const a of fa){
+    let over=0,man=0,warn=0;
+    for(const s of studs){const d=sd(a.id,s.id);if(nb(finalText(a,d))>a.limit)over++;if(a.type==='single')continue;const ms=mergedState(a,d);if(ms.manual)man++;if(ms.warn)warn++;}
+    h+=`<span class="pill ${over?'bad':'ok'}">${esc(a.name)} 초과 ${over}명</span>`;
+    if(man) h+=`<span class="pill">${esc(a.name)} ✏️수정 ${man}명</span>`;
+    if(warn) h+=`<span class="pill warn">${esc(a.name)} ⚠️원본 변경 ${warn}명</span>`;
+  }
+  h+=`</div>`;
+  if(!studs.length) h+=`<div class="empty">명단에 학생이 없습니다.</div>`;
+  for(const s of studs){
+    h+=`<div class="card" id="c_${s.id}"><div class="card-h"><span class="stu">${esc(s.hakbun)} ${esc(s.name)}</span></div><div class="card-b">`;
+    for(const a of fa) h+=a.type==='single'?singleSection(a,s):mergeSection(a,s,true);
+    h+=`</div></div>`;
+  }
+  $('#main').innerHTML=h;
+}
+function remerge(aid,sid){sd(aid,sid).merged=null;touch();render();}
+function keepMerge(aid,sid){const a=area(aid),d=sd(aid,sid);d.merged.base=autoText(a,d);touch();render();}
+function copyMerged(aid,sid){const a=area(aid);copyText(mergedState(a,sd(aid,sid)).text);}
+
+/* 단일칸 (행발) */
+function singleCard(a,s){
+  const d=sd(a.id,s.id), b=nb(d.text);
+  return `<div class="card" id="c_${s.id}"><div class="card-h"><span class="stu">${esc(s.hakbun)} ${esc(s.name)}</span></div><div class="card-b">
+    <textarea class="grow" data-a="${a.id}" data-s="${s.id}" oninput="onSingleInput(this)">${esc(d.text||'')}</textarea>
+    <div class="mfoot"><span class="bytes ${b>a.limit?'over':'ok'}" id="sb_${a.id}_${s.id}">${fmt(b)} / ${fmt(a.limit)}B</span><span class="spacer"></span><button class="sm pri" onclick="copyText(sd('${a.id}','${s.id}').text)">📋 복사</button></div></div></div>`;
+}
+function singleSection(a,s){
+  const d=sd(a.id,s.id), b=nb(d.text);
+  return `<div class="msec"><div class="msec-h"><b>${esc(a.name)}</b><span class="badge">직접 작성</span></div>
+    <textarea class="grow" data-a="${a.id}" data-s="${s.id}" oninput="onSingleInput(this)">${esc(d.text||'')}</textarea>
+    <div class="mfoot"><span class="bytes ${b>a.limit?'over':'ok'}" id="sb_${a.id}_${s.id}">${fmt(b)} / ${fmt(a.limit)}B</span><span class="spacer"></span><button class="sm pri" onclick="copyText(sd('${a.id}','${s.id}').text)">📋 복사</button></div></div>`;
+}
+function onSingleInput(t){
+  const a=area(t.dataset.a), s=t.dataset.s;sd(a.id,s).text=t.value;
+  const b=nb(t.value), el=$('#sb_'+a.id+'_'+s);
+  el.textContent=`${fmt(b)} / ${fmt(a.limit)}B${b>a.limit?` (${fmt(b-a.limit)}B 초과)`:''}`;
+  el.classList.toggle('over',b>a.limit);el.classList.toggle('ok',b<=a.limit);
+  grow(t);touch();
+}
+
+function copyText(text){
+  const fb=()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('복사했습니다');};
+  if(navigator.clipboard&&window.isSecureContext) navigator.clipboard.writeText(text).then(()=>toast('복사했습니다'),fb); else fb();
+}
+
+/* ================= 인쇄 ================= */
+function doPrint(){
+  if(UI.tab==='final') return printFinal();
+  const a=area(UI.tab), r=curRoster(a);if(!r)return;
+  const view=a.type==='single'?'single':(a.inFinal?'act':(UI.view[a.id]||'act'));
+  const filter=UI.filter[a.id]||'all';
+  const vl={act:'활동별 확인지',merge:'병합본',single:''}[view];
+  let h=`<div class="ptitle">${DB.year}학년도 ${esc(a.name)} · ${esc(r.name)} ${vl}${view==='act'&&filter!=='all'?' ('+esc(a.acts.find(x=>x.id===filter)?.name||'')+')':''}</div>`;
+  for(const s of sortedStudents(r)){
+    const d=sd(a.id,s.id);
+    h+=`<div class="pcard">`;
+    if(view==='act'){
+      const list=actsFor(a,d).filter(x=>filter==='all'||x.id===filter);
+      h+=`<div class="phead"><span>${esc(s.hakbun)} ${esc(s.name)}</span><span class="pb">한도 ${fmt(a.limit)}B · 체크 합계 ${fmt(nb(autoText(a,d)))}B</span></div>`;
+      for(const x of list){
+        const v=d.acts[x.id]||{};
+        h+=`<div class="pact"><span class="pn">${v.checked?'☑':'☐'} ${esc(x.name)}</span> <span class="pb">(${fmt(nb(v.text||''))}B)</span><div class="pt">${esc(v.text||'') || '<span class="pb">(미작성)</span>'}</div></div>`;
+      }
+      h+=`<div class="pmemo">수정·요청 사항</div>`;
+    }else{
+      const text=view==='merge'?mergedState(a,d).text:d.text;
+      h+=`<div class="phead"><span>${esc(s.hakbun)} ${esc(s.name)}</span><span class="pb">${fmt(nb(text))} / ${fmt(a.limit)}B</span></div><div class="pact"><div class="pt" style="margin-left:0">${esc(text)||'<span class="pb">(미작성)</span>'}</div></div>`;
+    }
+    h+=`</div>`;
+  }
+  $('#printArea').innerHTML=h;
+  window.print();
+}
+function printFinal(){
+  const r=finalRoster();if(!r)return;
+  const fa=finalAreas().filter(a=>a.rosterIds.includes(r.id));
+  let h=`<div class="ptitle">${DB.year}학년도 ${esc(fa.map(a=>a.name).join('·'))} 최종본 · ${esc(r.name)}</div>`;
+  for(const s of sortedStudents(r)){
+    h+=`<div class="pcard"><div class="phead"><span>${esc(s.hakbun)} ${esc(s.name)}</span></div>`;
+    for(const a of fa){
+      const t=finalText(a,sd(a.id,s.id));
+      h+=`<div class="pact"><span class="pn">${esc(a.name)}</span> <span class="pb">(${fmt(nb(t))} / ${fmt(a.limit)}B)</span><div class="pt">${esc(t)||'<span class="pb">(미작성)</span>'}</div></div>`;
+    }
+    h+=`</div>`;
+  }
+  $('#printArea').innerHTML=h;window.print();
+}
+window.addEventListener('afterprint',()=>{$('#printArea').innerHTML='';});
+
+/* ================= 엑셀(CSV) 내보내기 ================= */
+function csvCell(v){v=String(v??'');return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function exportCSV(){
+  if(UI.tab==='final') return exportFinalCSV();
+  const a=area(UI.tab);
+  const rows=[];
+  if(a.type==='single') rows.push(['명단','학번','이름','내용','나이스 바이트']);
+  else rows.push(['명단','학번','이름',...a.acts.flatMap(x=>[x.name,x.name+' 바이트',x.name+' 체크']),'개별 활동','병합본','병합 바이트','병합 상태']);
+  for(const rid of a.rosterIds){
+    const r=roster(rid);if(!r)continue;
+    for(const s of sortedStudents(r)){
+      const d=sd(a.id,s.id);
+      if(a.type==='single'){rows.push([r.name,s.hakbun,s.name,d.text,nb(d.text)]);continue;}
+      const row=[r.name,s.hakbun,s.name];
+      for(const x of a.acts){
+        const v=d.acts[x.id]||{}, hid=d.hidden.includes(x.id);
+        row.push(hid?'(숨김)':(v.text||''),hid?'':nb(v.text||''),hid?'':(v.checked?'O':''));
+      }
+      row.push(d.extra.map(x=>`[${x.name}${d.acts[x.id]?.checked?' ✔':''}] ${d.acts[x.id]?.text||''}`).join('\n'));
+      const ms=mergedState(a,d);
+      row.push(ms.text,nb(ms.text),ms.warn?'원본 변경됨':ms.manual?'수정됨':'자동');
+      rows.push(row);
+    }
+  }
+  const csv='\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`${DB.year}_${a.name}.csv`);
+  toast('CSV로 내보냈습니다 (암호화되지 않은 파일입니다)');
+}
+function exportFinalCSV(){
+  const r=finalRoster();if(!r)return;
+  const fa=finalAreas().filter(a=>a.rosterIds.includes(r.id));
+  const rows=[['학번','이름',...fa.flatMap(a=>[a.name+' 최종',a.name+' 바이트',a.name+' 상태'])]];
+  for(const s of sortedStudents(r)){
+    const row=[s.hakbun,s.name];
+    for(const a of fa){const d=sd(a.id,s.id),t=finalText(a,d);row.push(t,nb(t),finalStatus(a,d));}
+    rows.push(row);
+  }
+  const csv='﻿'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+  download(new Blob([csv],{type:'text/csv;charset=utf-8'}),`${DB.year}_최종_${fa.map(a=>a.name).join('')}.csv`);
+  toast('CSV로 내보냈습니다 (암호화되지 않은 파일입니다)');
+}
+function download(blob,name){
+  const u=URL.createObjectURL(blob), el=document.createElement('a');
+  el.href=u;el.download=name;document.body.appendChild(el);el.click();el.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+
+/* ================= 암호화 ================= */
+function b64e(u8){let s='';for(let i=0;i<u8.length;i+=0x8000)s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000));return btoa(s);}
+function b64d(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+async function deriveKey(pw,salt){
+  const km=await crypto.subtle.importKey('raw',TE.encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+const cryptoOK=()=>!!(window.crypto&&crypto.subtle);
+async function serialize(){
+  const json=JSON.stringify(DB);
+  if(!password) return json;
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(password,salt);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,TE.encode(json)));
+  return JSON.stringify({app:'saenggibu-writer',enc:'AES-GCM/PBKDF2-SHA256',year:DB.year,salt:b64e(salt),iv:b64e(iv),data:b64e(ct)});
+}
+async function deserialize(text){
+  let o;
+  try{o=JSON.parse(text);}catch{throw new Error('파일 형식이 올바르지 않습니다.');}
+  if(o.app!=='saenggibu-writer') throw new Error('생기부 작성기 파일이 아닙니다.');
+  if(!o.enc){password=null;return o;}
+  if(!cryptoOK()) throw new Error('이 브라우저에서는 암호화 파일을 열 수 없습니다. 크롬이나 엣지를 사용하세요.');
+  for(let tries=0;tries<5;tries++){
+    const pw=await askPw({title:'🔒 암호화된 파일',desc:`${o.year||''}학년도 파일입니다. 비밀번호를 입력하세요.`,confirm:false});
+    if(pw==null) throw new Error('cancel');
+    try{
+      const key=await deriveKey(pw,b64d(o.salt));
+      const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64d(o.iv)},key,b64d(o.data));
+      password=pw;return JSON.parse(TD.decode(pt));
+    }catch{alert('비밀번호가 맞지 않습니다.');}
+  }
+  throw new Error('비밀번호 입력 횟수를 초과했습니다.');
+}
+
+/* 비밀번호 입력창 */
+function askPw({title,desc,confirm,allowClear}){
+  return new Promise(res=>{
+    const m=$('#modal'),p1=$('#mPw1'),p2=$('#mPw2');
+    $('#mTitle').textContent=title;$('#mDesc').textContent=desc||'';
+    p1.value=p2.value='';p2.style.display=confirm?'':'none';
+    $('#mClear').style.display=allowClear?'':'none';
+    m.classList.remove('hidden');setTimeout(()=>p1.focus(),30);
+    const done=v=>{m.classList.add('hidden');$('#mOk').onclick=$('#mCancel').onclick=$('#mClear').onclick=p1.onkeydown=p2.onkeydown=null;res(v);};
+    const ok=()=>{
+      if(!p1.value){alert('비밀번호를 입력하세요.');return;}
+      if(confirm&&p1.value!==p2.value){alert('비밀번호 확인이 일치하지 않습니다.');return;}
+      done(p1.value);
+    };
+    $('#mOk').onclick=ok;$('#mCancel').onclick=()=>done(null);$('#mClear').onclick=()=>done('');
+    p1.onkeydown=p2.onkeydown=e=>{if(e.key==='Enter')ok();if(e.key==='Escape')done(null);};
+  });
+}
+async function setPassword(){
+  if(!cryptoOK()){alert('이 브라우저에서는 암호화를 쓸 수 없습니다. 크롬이나 엣지를 사용하세요.');return;}
+  const pw=await askPw({title:password?'비밀번호 변경':'비밀번호 설정',desc:'다음 저장부터 이 비밀번호로 암호화됩니다. 잊으면 복구할 수 없습니다.',confirm:true,allowClear:!!password});
+  if(pw==null)return;
+  if(pw===''){if(!confirm('비밀번호를 해제할까요? 다음 저장부터 암호화되지 않습니다.'))return;password=null;toast('비밀번호 해제됨 — 저장해야 반영됩니다');}
+  else{password=pw;toast('비밀번호 설정됨 — 저장해야 반영됩니다');}
+  touch();render();
+}
+
+/* ================= 파일 새로 만들기 / 열기 / 저장 ================= */
+function newFile(){
+  if(dirty&&!confirm('저장하지 않은 변경 사항이 있습니다. 계속할까요?'))return;
+  const y=prompt('새 파일의 학년도를 입력하세요',DB?DB.year+1:new Date().getFullYear());
+  if(!y||!/^\d{4}$/.test(y.trim())){if(y)alert('학년도는 4자리 숫자로 입력하세요.');return;}
+  let copy=null;
+  if(DB&&confirm('현재 파일의 명단과 영역·활동 설정을 복사할까요?\n(작성 내용은 복사하지 않습니다)')) copy=DB;
+  DB=newDB(+y.trim(),copy);
+  if(!copy) password=null;
+  fileHandle=null;fileName='';UI={tab:'settings',cls:{},view:{},filter:{}};OPEN={};
+  dirty=true;render();
+  toast(`${y}학년도 새 파일을 만들었습니다. 저장해 주세요.`);
+}
+async function loadText(text,name){
+  try{
+    const o=await deserialize(text);
+    DB=o;DB.rosters??=[];DB.areas??=[];DB.data??={};migrate(DB);
+    fileName=name;UI={tab:DB.areas[0]?.id||'settings',cls:{},view:{},filter:{}};OPEN={};
+    clean();render();window.scrollTo(0,0);toast(`${name} 불러옴`);
+    return true;
+  }catch(e){if(e.message!=='cancel')alert(e.message);return false;}
+}
+async function openFile(){
+  if(dirty&&!confirm('저장하지 않은 변경 사항이 있습니다. 계속할까요?'))return;
+  if(window.showOpenFilePicker){
+    let h;
+    try{[h]=await showOpenFilePicker({types:[{description:'생기부 데이터',accept:{'application/json':['.json']}}]});}
+    catch(e){if(e.name==='AbortError')return;h=null;}
+    if(h){
+      const f=await h.getFile();
+      if(await loadText(await f.text(),f.name)){
+        fileHandle=h;rememberHandle(h);await checkPerm();
+      }
+      return;
+    }
+  }
+  $('#fileInput').value='';$('#fileInput').click();
+}
+$('#fileInput').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(await loadText(await f.text(),f.name)) fileHandle=null;
+});
+async function saveFile(saveAs,silent){
+  if(!DB||saving)return;
+  if(silent&&!fileHandle)return;
+  saving=true;
+  try{
+    const text=await serialize();
+    const suggested=fileName||`생기부_${DB.year}.json`;
+    if(FSA){
+      try{
+        if(!fileHandle||saveAs){fileHandle=await showSaveFilePicker({suggestedName:suggested,types:[{description:'생기부 데이터',accept:{'application/json':['.json']}}]});rememberHandle(fileHandle);}
+        const w=await fileHandle.createWritable();await w.write(text);await w.close();
+        fileName=fileHandle.name;lastSaved=new Date();needPerm=false;clean();renderHeader();
+        if(!silent) toast(`저장했습니다 · ${fileName}${password?' 🔒':''}`);
+        return;
+      }catch(e){
+        if(e.name==='AbortError')return;
+        if(silent){needPerm=true;updAuto();return;}
+        fileHandle=null;
+      }
+    }
+    if(silent)return;
+    download(new Blob([text],{type:'application/json'}),suggested);
+    fileName=suggested;lastSaved=new Date();clean();renderHeader();toast('다운로드 폴더에 저장했습니다. USB로 옮겨 주세요.');
+  }finally{saving=false;}
+}
+
+/* 끌어다 놓기로 열기 */
+let dragDepth=0;
+const isFileDrag=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
+window.addEventListener('dragenter',e=>{if(!isFileDrag(e))return;e.preventDefault();dragDepth++;$('#dropOverlay').classList.add('show');});
+window.addEventListener('dragover',e=>{if(!isFileDrag(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy';});
+window.addEventListener('dragleave',e=>{if(!isFileDrag(e))return;dragDepth=Math.max(0,dragDepth-1);if(!dragDepth)$('#dropOverlay').classList.remove('show');});
+window.addEventListener('drop',async e=>{
+  if(!isFileDrag(e))return;
+  e.preventDefault();dragDepth=0;$('#dropOverlay').classList.remove('show');
+  const items=[...e.dataTransfer.items].filter(i=>i.kind==='file');
+  if(items.length!==1){alert('파일을 하나만 끌어다 놓아 주세요.');return;}
+  const item=items[0];
+  const hp=item.getAsFileSystemHandle?item.getAsFileSystemHandle().catch(()=>null):Promise.resolve(null); // drop 직후에 바로 요청해야 함
+  const file=item.getAsFile();
+  if(!file||!/\.json$/i.test(file.name)){alert('생기부 작성기로 저장한 .json 파일만 열 수 있습니다.');return;}
+  if(dirty&&!confirm('저장하지 않은 변경 사항이 있습니다. 계속할까요?'))return;
+  const h=await hp;
+  if(await loadText(await file.text(),file.name)){
+    if(h&&h.kind==='file'){
+      fileHandle=h;rememberHandle(h);await checkPerm();
+    }else{fileHandle=null;updAuto();}
+  }
+});
+
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveFile(false);}
+});
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+
+render();
+kvGet('recent').then(r=>{if(r&&r.handle){RECENT=r;if(!DB)render();}});
+</script>
+</body>
+</html>

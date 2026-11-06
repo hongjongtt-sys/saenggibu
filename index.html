@@ -103,6 +103,10 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--pri-soft);border
 .mbox{background:#fff;border-radius:12px;padding:20px;width:min(380px,92vw)}
 .mbox h3{margin:0 0 6px;font-size:16px}
 .mbox input{width:100%;margin:5px 0}
+.choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.choices button{text-align:left;padding:8px 12px;display:flex;flex-direction:column;gap:2px;white-space:normal}
+.choices button span{font-size:12px;opacity:.8}
+.clist{margin:6px 0 0;padding-left:18px;max-height:180px;overflow:auto;font-size:12px}
 .mbtns{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2933;color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:200}
 #toast.show{opacity:.95}
@@ -287,12 +291,17 @@ const finalText=(a,d)=>a.type==='single'?(d.text||''):mergedState(a,d).text;
 const finalStatus=(a,d)=>{if(a.type==='single')return '직접 작성';const ms=mergedState(a,d);return ms.warn?'원본 변경됨':ms.manual?'수정됨':'자동';};
 function finalRoster(){for(const a of finalAreas()){const r=a.rosterIds.map(roster).find(Boolean);if(r)return r;}return null;}
 function migrate(db){for(const a of db.areas){if(a.type==='activity'&&a.inFinal===undefined)a.inFinal=(a.name==='자율'||a.name==='진로');if(a.type==='activity'&&a.hope===undefined)a.hope=/진로/.test(a.name);}}
+/* 희망분야: 진로 특기사항과 합쳐서 영역 한도(예: 1500B) 안에 들어가야 함 → 바이트 합계에 항상 포함 */
+const hopeB=(a,sid)=>a.hope?nb(sd(a.id,sid).hope||''):0;
 function hopeInput(a,s){
   const v=sd(a.id,s.id).hope||'';
-  return `<label class="hope">희망분야 <input type="text" value="${esc(v)}" placeholder="예) 데이터 과학자" data-a="${a.id}" data-s="${s.id}" oninput="onHopeInput(this)"></label>`;
+  return `<label class="hope">희망분야 <input type="text" value="${esc(v)}" placeholder="예) 데이터 과학자" data-a="${a.id}" data-s="${s.id}" oninput="onHopeInput(this)"><span class="bytes" id="hb_${a.id}_${s.id}">${fmt(nb(v))}B</span></label>`;
 }
 function onHopeInput(t){
-  const v=t.value;sd(t.dataset.a,t.dataset.s).hope=v;
+  const a=area(t.dataset.a), sid=t.dataset.s, v=t.value;sd(a.id,sid).hope=v;
+  const el=$(`#hb_${a.id}_${sid}`); if(el) el.textContent=`${fmt(nb(v))}B`;
+  updateSum(a,sid);
+  const mf=$(`#mf_${a.id}_${sid}`); if(mf) mf.innerHTML=mergeFoot(a,sid,mergedState(a,sd(a.id,sid)));
   touch();
 }
 function touch(){dirty=true;const m=$('#dirtyMark');if(m)m.textContent='● 저장 안 됨';}
@@ -410,7 +419,7 @@ function renderSettings(){
         h+=`<select onchange="setRosterOne('${a.id}',this.value)"><option value="">— 선택 —</option>${DB.rosters.map(r=>`<option value="${r.id}" ${a.rosterIds[0]===r.id?'selected':''}>${esc(r.name)} (${r.students.length}명)</option>`).join('')}</select>`;
       }
       if(a.type==='single') h+=`<div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" ${a.inFinal?'checked':''} onchange="area('${a.id}').inFinal=this.checked;touch();render()"> <b>📋 최종 탭</b>에도 함께 보이기</label><span class="muted">(이 탭은 그대로 두고, 최종 탭에서도 같은 내용을 보고 고칠 수 있음)</span></div>`;
-      if(a.type==='activity') h+=`<div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" ${a.hope?'checked':''} onchange="area('${a.id}').hope=this.checked;touch();render()"> <b>희망분야</b> 칸 사용</label><span class="muted">(진로활동 나이스 양식의 희망분야 칸에 들어감)</span></div>`;
+      if(a.type==='activity') h+=`<div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" ${a.hope?'checked':''} onchange="area('${a.id}').hope=this.checked;touch();render()"> <b>희망분야</b> 칸 사용</label><span class="muted">(나이스 양식 희망분야 칸에 들어가며, 바이트는 특기사항과 합쳐서 한도를 계산)</span></div>`;
       if(a.type==='activity') h+=`<div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" ${a.inFinal?'checked':''} onchange="area('${a.id}').inFinal=this.checked;touch();render()"> 병합을 <b>📋 최종 탭</b>으로 모으기</label><span class="muted">(체크 해제 시 이 탭 안에 병합 보기가 생김)</span></div>`;
       if(a.type!=='single'){
         h+=`<div class="row" style="margin-top:12px"><b>활동 목록</b><span class="muted">모든 학생에게 공통 적용 (학생별 추가·숨기기는 작성 화면에서)</span></div><div class="actlist">`;
@@ -587,7 +596,7 @@ function renderArea(a){
   for(const s of studs){
     const d=sd(a.id,s.id);
     if(a.type==='single'){const b=nb(d.text);if(b>a.limit)over++;if(!d.text.trim())empty++;continue;}
-    const ms=mergedState(a,d);if(nb(ms.text)>a.limit)over++;if(ms.manual)man++;if(ms.warn)warn++;if(!ms.text.trim())empty++;
+    const ms=mergedState(a,d);if(nb(ms.text)+hopeB(a,s.id)>a.limit)over++;if(ms.manual)man++;if(ms.warn)warn++;if(!ms.text.trim())empty++;
   }
   h+=`<div class="stats"><span class="pill">${studs.length}명 · 한도 ${fmt(a.limit)}B</span>`;
   h+=over?`<span class="pill bad">${view==='act'?'체크 합계 ':''}한도 초과 ${over}명</span>`:`<span class="pill ok">한도 초과 없음</span>`;
@@ -630,9 +639,9 @@ function jump(sid){if(!sid)return;const el=document.getElementById('c_'+sid);if(
 function actCard(a,s,filter){
   const d=sd(a.id,s.id);
   const list=actsFor(a,d).filter(x=>filter==='all'||x.id===filter);
-  const sum=nb(autoText(a,d));
+  const sum=nb(autoText(a,d))+hopeB(a,s.id);
   let h=`<div class="card" id="c_${s.id}"><div class="card-h"><span class="stu">${esc(s.hakbun)} ${esc(s.name)}</span>${a.hope?hopeInput(a,s):''}<span class="spacer"></span>
-    <span class="bytes ${sum>a.limit?'over':''}" id="sum_${s.id}">체크 합계 ${fmt(sum)} / ${fmt(a.limit)}B</span>
+    <span class="bytes ${sum>a.limit?'over':''}" id="sum_${s.id}">${a.hope?'체크+희망분야':'체크 합계'} ${fmt(sum)} / ${fmt(a.limit)}B</span>
     ${filter==='all'?`<button class="sm" onclick="addExtra('${a.id}','${s.id}')">+ 개별 활동</button>`:''}</div>`;
   if(!list.length) h+=`<div class="hiddenrow">${filter==='all'?'활동이 없습니다.':'이 학생은 이 활동을 숨겼습니다.'}</div>`;
   for(const x of list){
@@ -652,8 +661,8 @@ function actCard(a,s,filter){
   return h+'</div>';
 }
 function updateSum(a,s){
-  const d=sd(a.id,s), sum=nb(autoText(a,d)), el=$('#sum_'+s);
-  if(el){el.textContent=`체크 합계 ${fmt(sum)} / ${fmt(a.limit)}B`;el.classList.toggle('over',sum>a.limit);}
+  const d=sd(a.id,s), sum=nb(autoText(a,d))+hopeB(a,s), el=$('#sum_'+s);
+  if(el){el.textContent=`${a.hope?'체크+희망분야':'체크 합계'} ${fmt(sum)} / ${fmt(a.limit)}B`;el.classList.toggle('over',sum>a.limit);}
 }
 function onActInput(t){
   const a=area(t.dataset.a), s=t.dataset.s, x=t.dataset.x, d=sd(a.id,s);
@@ -686,8 +695,9 @@ function unhide(aid,sid){sd(aid,sid).hidden=[];touch();render();}
 /* 병합 */
 function mergeBadge(ms){return ms.warn?'<span class="badge warn">⚠️ 원본 변경됨</span>':ms.manual?'<span class="badge man">✏️ 수정됨</span>':'<span class="badge">자동 병합</span>';}
 function mergeFoot(a,s,ms){
-  const b=nb(ms.text);
-  let h=`<span class="bytes ${b>a.limit?'over':'ok'}">${fmt(b)} / ${fmt(a.limit)}B ${b>a.limit?`(${fmt(b-a.limit)}B 초과)`:''}</span><span class="spacer"></span>`;
+  const b=nb(ms.text)+hopeB(a,s);
+  const hb=hopeB(a,s);
+  let h=`<span class="bytes ${b>a.limit?'over':'ok'}">${fmt(b)} / ${fmt(a.limit)}B${hb?` (희망분야 ${fmt(hb)}B 포함)`:''} ${b>a.limit?`· ${fmt(b-a.limit)}B 초과`:''}</span><span class="spacer"></span>`;
   if(ms.manual) h+=`<button class="sm" onclick="remerge('${a.id}','${s}')">↺ 다시 병합 (수정 버리기)</button>`;
   h+=`<button class="sm pri" onclick="copyMerged('${a.id}','${s}')">📋 복사</button>`;
   return h;
@@ -727,7 +737,7 @@ function renderFinal(){
   h+=`<div class="stats">`;
   for(const a of fa){
     let over=0,man=0,warn=0;
-    for(const s of studs){const d=sd(a.id,s.id);if(nb(finalText(a,d))>a.limit)over++;if(a.type==='single')continue;const ms=mergedState(a,d);if(ms.manual)man++;if(ms.warn)warn++;}
+    for(const s of studs){const d=sd(a.id,s.id);if(nb(finalText(a,d))+hopeB(a,s.id)>a.limit)over++;if(a.type==='single')continue;const ms=mergedState(a,d);if(ms.manual)man++;if(ms.warn)warn++;}
     h+=`<span class="pill ${over?'bad':'ok'}">${esc(a.name)} 초과 ${over}명</span>`;
     if(man) h+=`<span class="pill">${esc(a.name)} ✏️수정 ${man}명</span>`;
     if(warn) h+=`<span class="pill warn">${esc(a.name)} ⚠️원본 변경 ${warn}명</span>`;
@@ -784,7 +794,7 @@ function doPrint(){
     h+=`<div class="pcard">`;
     if(view==='act'){
       const list=actsFor(a,d).filter(x=>filter==='all'||x.id===filter);
-      h+=`<div class="phead"><span>${esc(s.hakbun)} ${esc(s.name)}${a.hope?` <span class="pb">· 희망분야: ${esc(d.hope||'')||'＿＿＿＿'}</span>`:''}</span><span class="pb">한도 ${fmt(a.limit)}B · 체크 합계 ${fmt(nb(autoText(a,d)))}B</span></div>`;
+      h+=`<div class="phead"><span>${esc(s.hakbun)} ${esc(s.name)}${a.hope?` <span class="pb">· 희망분야: ${esc(d.hope||'')||'＿＿＿＿'}</span>`:''}</span><span class="pb">한도 ${fmt(a.limit)}B · 체크 합계 ${fmt(nb(autoText(a,d))+hopeB(a,s.id))}B</span></div>`;
       for(const x of list){
         const v=d.acts[x.id]||{};
         h+=`<div class="pact"><span class="pn">${v.checked?'☑':'☐'} ${esc(x.name)}</span> <span class="pb">(${fmt(nb(v.text||''))}B)</span><div class="pt">${esc(v.text||'') || '<span class="pb">(미작성)</span>'}</div></div>`;
@@ -807,7 +817,7 @@ function printFinal(){
     h+=`<div class="pcard"><div class="phead"><span>${esc(s.hakbun)} ${esc(s.name)}</span></div>`;
     for(const a of fa){
       const t=finalText(a,sd(a.id,s.id));
-      h+=`<div class="pact"><span class="pn">${esc(a.name)}</span> <span class="pb">(${fmt(nb(t))} / ${fmt(a.limit)}B)${a.hope?' · 희망분야: '+(esc(sd(a.id,s.id).hope||'')||'—'):''}</span><div class="pt">${esc(t)||'<span class="pb">(미작성)</span>'}</div></div>`;
+      h+=`<div class="pact"><span class="pn">${esc(a.name)}</span> <span class="pb">(${fmt(nb(t)+hopeB(a,s.id))} / ${fmt(a.limit)}B)${a.hope?' · 희망분야: '+(esc(sd(a.id,s.id).hope||'')||'—'):''}</span><div class="pt">${esc(t)||'<span class="pb">(미작성)</span>'}</div></div>`;
     }
     h+=`</div>`;
   }
@@ -984,8 +994,10 @@ async function neisFill(){
   const map={}, byName={};
   for(const rid of a.rosterIds){const r=roster(rid);if(!r)continue;for(const s of r.students){const k=stuKey(s.hakbun);if(k)map[k]=s;if(s.name)(byName[s.name]??=[]).push(s);}}
   const nameCol=X.header['성명'];
-  let filled=0,emptyOurs=0,noMatch=[],over=[],overwrote=0,nameDiff=0,hopeN=0;const used=new Set();
+  let filled=0,emptyOurs=0,noMatch=[],over=[],nameDiff=0,hopeN=0,same=0,kept=0,appended=0,overwrote=0,hopeKept=0;const used=new Set();
   const hopeCol=X.header['희망분야'];
+  // 1단계: 줄마다 할 일 정리
+  const plan=[];
   for(const row of X.rows.slice(1)){
     const key=rowKey(X,row);
     const nm=nameCol?String(X.cellVal(row.cells[nameCol])||'').trim():'';
@@ -996,14 +1008,49 @@ async function neisFill(){
     used.add(s.id);
     if(nm&&s.name&&nm!==s.name) nameDiff++;
     const text=areaText(a,s.id).replace(/\r\n?/g,'\n').trim();
-    const hopeV=(sd(a.id,s.id).hope||'').trim();
-    if(hopeCol&&a.hope&&hopeV){setCellText(X,row,hopeCol,hopeV);hopeN++;}
-    if(!text){emptyOurs++;continue;}
-    if(String(X.cellVal(row.cells[cc])||'').trim()) overwrote++;
-    setCellText(X,row,cc,text);filled++;
-    if(nb(text)>a.limit) over.push(`${s.hakbun}(${fmt(nb(text))}B)`);
+    const old=String(X.cellVal(row.cells[cc])||'').replace(/\r\n?/g,'\n').trim();
+    const hopeV=a.hope&&hopeCol?(sd(a.id,s.id).hope||'').trim():'';
+    const hopeOld=hopeCol?String(X.cellVal(row.cells[hopeCol])||'').trim():'';
+    let st='write';
+    if(!text) st='none';
+    else if(old&&(old===text||old.includes(text))) st='same';
+    else if(old) st='conflict';
+    plan.push({row,s,text,old,st,hopeV,hopeOld});
   }
-  if(!filled&&!hopeN){alert(`채울 내용이 없습니다.\n양식 학생 중 작성기 명단과 맞는 학생: ${used.size}명\n(학년·반·번호가 학번과 맞는지, '${a.name}'에 명단이 연결됐는지 확인해 주세요)`);return;}
+  // 2단계: 양식에 이미 다른 내용이 있는 학생 처리 방법 묻기
+  const conflicts=plan.filter(x=>x.st==='conflict'||(x.hopeV&&x.hopeOld&&x.hopeOld!==x.hopeV));
+  let mode='append';
+  if(conflicts.length){
+    const list=conflicts.slice(0,12).map(x=>`<li><b>${esc(x.s.hakbun)}</b> ${x.old?`양식 내용 ${fmt(nb(x.old))}B: “${esc(x.old.slice(0,40))}${x.old.length>40?'…':''}”`:''}${x.hopeOld&&x.hopeV&&x.hopeOld!==x.hopeV?` · 희망분야: ${esc(x.hopeOld)}`:''}</li>`).join('')+(conflicts.length>12?`<li>… 외 ${conflicts.length-12}명</li>`:'');
+    mode=await askChoice(`양식에 이미 내용이 있는 학생 ${conflicts.length}명`,
+      `나이스에서 받은 양식에 다른 선생님이나 이전 학교에서 쓴 내용이 이미 들어 있습니다. 어떻게 할까요?<ul class="clist">${list}</ul>`,
+      [['append','기존 내용 뒤에 이어 붙이기 (줄바꿈)','추천 · 기존 내용 다음 줄에 작성기 내용을 붙입니다'],
+       ['prepend','기존 내용 앞에 붙이기','작성기 내용 다음 줄에 기존 내용이 옵니다'],
+       ['keep','기존 내용 그대로 두기','이 학생들은 채우지 않고 건너뜁니다'],
+       ['overwrite','작성기 내용으로 덮어쓰기','기존 내용이 지워집니다']]);
+    if(!mode) return;
+  }
+  // 3단계: 채우기
+  for(const x of plan){
+    let hopeFinal=x.hopeOld;
+    if(x.hopeV){
+      if(!x.hopeOld||x.hopeOld===x.hopeV||mode==='overwrite'){if(x.hopeOld!==x.hopeV)setCellText(X,x.row,hopeCol,x.hopeV);hopeN++;hopeFinal=x.hopeV;}
+      else hopeKept++;
+    }
+    const hb=hopeCol?nb(hopeFinal):0;
+    if(x.st==='none'){emptyOurs++;continue;}
+    if(x.st==='same'){same++;continue;}
+    let out=x.text;
+    if(x.st==='conflict'){
+      if(mode==='keep'){kept++;continue;}
+      if(mode==='append'){out=x.old+'\n'+x.text;appended++;}
+      else if(mode==='prepend'){out=x.text+'\n'+x.old;appended++;}
+      else overwrote++;
+    }
+    setCellText(X,x.row,cc,out);filled++;
+    if(nb(out)+hb>a.limit) over.push(`${x.s.hakbun}(${fmt(nb(out)+hb)}B)`);
+  }
+  if(!filled&&!hopeN){alert(same||kept?`새로 채울 내용이 없습니다.\n이미 같은 내용이 들어 있음 ${same}명 · 기존 내용 유지 ${kept}명`:`채울 내용이 없습니다.\n양식 학생 중 작성기 명단과 맞는 학생: ${used.size}명\n(학년·반·번호가 학번과 맞는지, '${a.name}'에 명단이 연결됐는지 확인해 주세요)`);return;}
   if(X.sst){const root=X.sst.documentElement;root.setAttribute('count',X.strings.length);root.setAttribute('uniqueCount',X.strings.length);}
   const ser=new XMLSerializer();
   X.zip.file(X.sheetPath,ser.serializeToString(X.sheet));
@@ -1015,12 +1062,26 @@ async function neisFill(){
   if(hopeN) msg+=`\n✅ 희망분야 ${hopeN}명`;
   if(hopeCol&&a.hope&&hopeN<used.size) msg+=`\n· 희망분야 미입력(양식 그대로) ${used.size-hopeN}명`;
   if(emptyOurs) msg+=`\n· 작성 내용 없음(빈칸 유지) ${emptyOurs}명`;
-  if(overwrote) msg+=`\n· 양식에 이미 있던 내용을 덮어씀 ${overwrote}명`;
+  if(appended) msg+=`\n· 기존 내용과 합침 ${appended}명 (${mode==='append'?'기존 내용 뒤에':'기존 내용 앞에'})`;
+  if(kept) msg+=`\n· 기존 내용 유지(건너뜀) ${kept}명`;
+  if(overwrote) msg+=`\n· 기존 내용을 덮어씀 ${overwrote}명`;
+  if(same) msg+=`\n· 이미 같은 내용이 들어 있어 그대로 둠 ${same}명`;
+  if(hopeKept) msg+=`\n· 희망분야는 양식의 기존 값 유지 ${hopeKept}명`;
   if(noMatch.length) msg+=`\n⚠️ 작성기 명단에 없는 학생 ${noMatch.length}명: ${noMatch.slice(0,8).join(', ')}${noMatch.length>8?' …':''}`;
-  if(over.length) msg+=`\n⚠️ 바이트 초과 ${over.length}명: ${over.slice(0,8).join(', ')}${over.length>8?' …':''}`;
+  if(over.length) msg+=`\n⚠️ 바이트 초과${hopeCol?'(희망분야 포함)':''} ${over.length}명: ${over.slice(0,8).join(', ')}${over.length>8?' …':''}`;
   if(nameDiff) msg+=`\n⚠️ 양식과 작성기의 이름이 다른 학생 ${nameDiff}명 (학년·반·번호 기준으로 채움)`;
   msg+=`\n\n다운로드 폴더의 파일을 나이스에서 업로드하세요. 이 파일은 암호화되지 않으니 업로드 후 지워 주세요.`;
   alert(msg);
+}
+function askChoice(title,html,options){
+  return new Promise(res=>{
+    const m=document.createElement('div');m.className='modal';
+    m.innerHTML=`<div class="mbox" style="width:min(520px,94vw)"><h3>${esc(title)}</h3><div class="hint" style="color:var(--text)">${html}</div>
+      <div class="choices">${options.map(([v,l,d],i)=>`<button data-v="${v}" class="${i===0?'pri':''}"><b>${esc(l)}</b><span>${esc(d)}</span></button>`).join('')}</div>
+      <div class="mbtns"><button data-v="">취소</button></div></div>`;
+    m.addEventListener('click',e=>{const b=e.target.closest('button[data-v]');if(!b)return;m.remove();res(b.dataset.v||null);});
+    document.body.appendChild(m);
+  });
 }
 /* 나이스 양식에서 명단 가져오기 */
 async function neisRoster(rid){

@@ -115,6 +115,10 @@ textarea:focus,input:focus,select:focus{outline:2px solid var(--pri-soft);border
 #dropOverlay{position:fixed;inset:0;z-index:150;background:rgba(47,91,234,.12);border:4px dashed var(--pri);display:none;align-items:center;justify-content:center;pointer-events:none}
 #dropOverlay.show{display:flex}
 #dropOverlay div{background:#fff;padding:18px 28px;border-radius:12px;font-size:17px;font-weight:700;color:var(--pri);box-shadow:0 4px 18px rgba(0,0,0,.12)}
+.rdrop{border:2px dashed #b9c6f5;background:#f7f9ff;border-radius:10px;padding:12px 16px;margin-bottom:10px;cursor:pointer;transition:background .15s,border-color .15s}
+.rdrop:hover,body.dragging .rdrop{background:var(--pri-soft);border-color:var(--pri)}
+.rdrop-t{font-weight:700;color:var(--pri);margin-bottom:4px}
+.rdrop-d{font-size:12.5px;color:var(--muted);line-height:1.7}
 .dropzone{margin-top:12px;padding:16px;border:2px dashed var(--line);border-radius:10px;color:var(--muted);font-size:13px}
 @media (max-width:640px){.paste{flex-direction:column}}
 @media print{
@@ -363,7 +367,7 @@ function renderWelcome(){
 
 /* ---------- 설정 화면 ---------- */
 function renderSettings(){
-  let h=`<div class="guide"><b>사용 순서</b> ① 명단 만들기(엑셀에서 학번·이름 붙여넣기) → ② 영역마다 명단 연결·활동 입력 → ③ 각 탭의 <b>✏️ 활동 입력</b>에서 작성 → 학생 확인용 인쇄 → 체크 → ④ <b>📋 병합</b>에서 최종 다듬고 나이스에 복사</div>`;
+  let h=`<div class="guide"><b>사용 순서</b> ① 명단 만들기(나이스 출석부 엑셀 놓기 또는 학번·이름 붙여넣기) → ② 영역마다 명단 연결·활동 입력 → ③ 각 탭의 <b>✏️ 활동 입력</b>에서 작성 → 학생 확인용 인쇄 → 체크 → ④ <b>📋 병합</b>에서 최종 다듬고 나이스에 복사</div>`;
 
   h+=`<section class="sec"><div class="sec-h"><h2>기본 정보</h2></div>
     <div class="card"><div class="card-b"><div class="row">
@@ -378,8 +382,15 @@ function renderSettings(){
 
   /* 명단 */
   h+=`<section class="sec"><div class="sec-h"><h2>① 명단 관리</h2><span class="spacer"></span><button class="pri" onclick="addRoster()">+ 명단 추가</button></div>
-    <div class="hint">담임반·수업반·동아리 명단을 각각 만드세요. 엑셀에서 <b>학번 | 이름</b> 두 열을 복사해 붙여넣으면 됩니다. 같은 학번은 기존 작성 내용을 유지한 채 이름만 갱신됩니다.</div>`;
-  if(!DB.rosters.length) h+=`<div class="empty">아직 명단이 없습니다. [+ 명단 추가]를 눌러 시작하세요.</div>`;
+    <div class="rdrop" onclick="pickFiles('.xlsx').then(importRosterFiles)">
+      <div class="rdrop-t">📂 나이스 엑셀을 여기에 끌어다 놓거나 <u>클릭해서 고르세요</u> <span class="muted">(여러 개 한 번에 가능)</span></div>
+      <div class="rdrop-d">명단 카드가 자동으로 만들어지고 영역에도 연결됩니다 — 수업반은 과목 영역, 담임반은 자율·진로·행발, 동아리는 동아리 영역<br>
+      · <b>수업반</b>: 교과담임 → 출결관리 → 교과시간별출석부출력 → 교과목 선택 → 조회 → 엑셀 다운로드<br>
+      · <b>담임반</b>: 같은 메뉴에서 교과목을 <b>자율·자치활동</b>으로 선택<br>
+      · <b>동아리</b>: 동아리담임 → 동아리활동관리 → 동아리활동 출결관리 → 출석부 출력 → 엑셀 다운로드</div>
+    </div>
+    <div class="hint">직접 만들려면 [+ 명단 추가] 후 엑셀에서 <b>학번 | 이름</b> 두 열을 복사해 붙여넣으세요. 같은 학번은 기존 작성 내용을 유지한 채 이름만 갱신됩니다.</div>`;
+  if(!DB.rosters.length) h+=`<div class="empty">아직 명단이 없습니다. 위 상자에 나이스 엑셀을 놓거나 [+ 명단 추가]를 눌러 시작하세요.</div>`;
   for(const r of DB.rosters){
     const used=DB.areas.filter(a=>a.rosterIds.includes(r.id)).map(a=>a.name);
     const op=OPEN['r'+r.id];
@@ -392,7 +403,8 @@ function renderSettings(){
     if(op){
       h+=`<div class="card-b"><div class="paste">
         <textarea id="paste_${r.id}" placeholder="엑셀에서 복사해 붙여넣기&#10;20301&#9;김철수&#10;20302&#9;이영희"></textarea>
-        <div class="col"><button class="pri" onclick="pasteRoster('${r.id}',false)">추가/갱신</button><button onclick="pasteRoster('${r.id}',true)">전체 교체</button><button onclick="neisRoster('${r.id}')" title="나이스에서 내려받은 엑셀 양식의 학년·반·번호·성명으로 명단을 만듭니다">나이스 양식에서 가져오기</button></div></div>`;
+        <div class="col"><button class="pri" onclick="pasteRoster('${r.id}',false)">추가/갱신</button><button onclick="pasteRoster('${r.id}',true)">전체 교체</button><button onclick="neisRoster('${r.id}')" title="나이스 엑셀의 학년·반·번호·성명으로 명단을 만듭니다">📂 나이스 엑셀에서 가져오기</button></div></div>
+        <div class="hint" style="margin:6px 0 0">📂 <b>나이스 엑셀에서 가져오기</b>: 이 명단에 학생을 넣습니다. 학년·반·번호·성명 칸이 있는 나이스 엑셀(.xlsx)이면 됩니다(경로는 위 상자 안내 참고).</div>`;
       if(r.students.length){
         h+=`<table class="stbl"><thead><tr><th style="width:120px">학번</th><th>이름</th><th style="width:50px"></th></tr></thead><tbody>`;
         for(const s of sortedStudents(r)) h+=`<tr><td><input type="text" value="${esc(s.hakbun)}" onchange="editStu('${r.id}','${s.id}','hakbun',this.value)"></td><td><input type="text" value="${esc(s.name)}" onchange="editStu('${r.id}','${s.id}','name',this.value)"></td><td><button class="sm danger" onclick="delStu('${r.id}','${s.id}')">삭제</button></td></tr>`;
@@ -935,9 +947,21 @@ async function openXlsx(file){
     return {el:rEl,num:+rEl.getAttribute('r'),cells};
   });
   if(!rows.length) throw new Error('양식에 내용이 없습니다.');
+  // 머리글 줄 찾기: 업로드 양식은 1행, 출석부 엑셀은 제목 아래(6행·9행 등)에 있음
+  const hdrText=r=>Object.keys(r.cells).map(k=>normH(cellVal(r.cells[k])));
+  let hi=rows.findIndex(r=>{const t=hdrText(r);return (t.includes('반/번호')||(t.includes('반')&&t.includes('번호')))&&(t.includes('성명')||t.includes('학년'));});
+  if(hi<0) hi=0;
   const header={};
-  for(const k in rows[0].cells) header[normH(cellVal(rows[0].cells[k]))]=+k;
-  return {zip,sheet,sheetPath,sst,sstPath,strings,rows,header,cellVal,sheetName:sheetEl.getAttribute('name')||''};
+  for(const k of Object.keys(rows[hi].cells).map(Number).sort((a,b)=>a-b)){const h=normH(cellVal(rows[hi].cells[k]));if(h&&!(h in header))header[h]=k;}
+  // 제목(동아리 부서명, 교과명) — 안내용
+  let title='',titleKind='';
+  for(const r of rows.slice(0,hi)){
+    const t=Object.keys(r.cells).map(Number).sort((a,b)=>a-b).map(k=>String(cellVal(r.cells[k])||'').trim()).filter(Boolean);
+    const i=t.findIndex(x=>/^부서명/.test(x));
+    if(i>=0){title=(t[i].replace(/^부서명\s*:?\s*/,'')||t[i+1]||'').trim();titleKind='club';break;}
+    const c=t.find(x=>/^교과\s*:/.test(x)); if(c){title=c.replace(/^교과\s*:\s*/,'').trim();titleKind='subject';break;}
+  }
+  return {zip,sheet,sheetPath,sst,sstPath,strings,rows,data:rows.slice(hi+1),header,cellVal,title,titleKind,sheetName:sheetEl.getAttribute('name')||''};
 }
 /* 양식 한 줄 → 학년-반-번호 열쇠 */
 function rowKey(X,row){
@@ -946,8 +970,10 @@ function rowKey(X,row){
   let grade=H['학년']?g(H['학년']):'', cls='', no='';
   if(H['반/번호']){const m=/(\d+)\s*\/\s*(\d+)/.exec(g(H['반/번호']));if(m){cls=m[1];no=m[2];}}
   else{cls=H['반']?g(H['반']):'';no=H['번호']?g(H['번호']):'';}
-  if(!/^\d+$/.test(grade)||!/^\d+$/.test(cls)||!/^\d+$/.test(no)) return null;
-  return `${+grade}-${+cls}-${+no}`;
+  const num=v=>/^\d+(\.0+)?$/.test(v)?String(parseInt(v,10)):null;   // 출석부 엑셀은 숫자가 2.0처럼 저장됨
+  grade=num(grade);cls=num(cls);no=num(no);
+  if(!grade||!cls||!no) return null;
+  return `${grade}-${cls}-${no}`;
 }
 function stuKey(hakbun){
   const h=String(hakbun).replace(/\D/g,'');
@@ -955,7 +981,7 @@ function stuKey(hakbun){
   return null;
 }
 function detectArea(X){
-  const H=X.header, r1=X.rows[1];
+  const H=X.header, r1=X.data[0];
   const val=c=>r1&&H[c]?String(X.cellVal(r1.cells[H[c]])||'').trim():'';
   const subj=val('과목'), kind=val('영역구분');
   if(subj){const a=DB.areas.find(a=>a.type==='subject'&&normH(a.name)===normH(subj));if(a)return {area:a,label:subj};return {area:null,label:subj};}
@@ -977,7 +1003,7 @@ function setCellText(X,row,col,text){
   let c=row.cells[col];
   if(!c){
     c=doc.createElementNS(XNS,'c');c.setAttribute('r',colName(col)+row.num);
-    const ref=X.rows[1]&&X.rows[1].cells[col]; if(ref&&ref.getAttribute('s')) c.setAttribute('s',ref.getAttribute('s'));
+    const ref=X.data[0]&&X.data[0].cells[col]; if(ref&&ref.getAttribute('s')) c.setAttribute('s',ref.getAttribute('s'));
     let before=null;for(const k of Object.keys(row.cells).map(Number).sort((a,b)=>a-b)) if(k>col){before=row.cells[k];break;}
     row.el.insertBefore(c,before);row.cells[col]=c;
   }
@@ -1013,7 +1039,7 @@ async function neisFill(){
   const hopeCol=X.header['희망분야'];
   // 1단계: 줄마다 할 일 정리
   const plan=[];
-  for(const row of X.rows.slice(1)){
+  for(const row of X.data){
     const key=rowKey(X,row);
     const nm=nameCol?String(X.cellVal(row.cells[nameCol])||'').trim():'';
     let s=key?map[key]:null;
@@ -1102,27 +1128,98 @@ function askChoice(title,html,options){
   });
 }
 /* 나이스 양식에서 명단 가져오기 */
-async function neisRoster(rid){
-  const file=await pickFile('.xlsx');if(!file)return;
-  let X;try{X=await openXlsx(file);}catch(e){alert(e.message);return;}
-  const nameCol=X.header['성명'];
-  const list=[];
-  for(const row of X.rows.slice(1)){
+function rosterListFromX(X){
+  const nameCol=X.header['성명'], list=[], seen=new Set();
+  for(const row of X.data){
     const k=rowKey(X,row);if(!k)continue;
     const [g,c,n]=k.split('-');
     const hakbun=`${g}${String(c).padStart(2,'0')}${String(n).padStart(2,'0')}`;
+    if(seen.has(hakbun))continue;seen.add(hakbun);
     list.push({hakbun,name:nameCol?String(X.cellVal(row.cells[nameCol])||'').trim():''});
   }
-  if(!list.length){alert('학년·반·번호를 읽지 못했습니다.');return;}
-  const r=roster(rid);let add=0,upd=0,noname=0;
+  return list;
+}
+function mergeStudents(r,list){
+  const inFile=new Set(list.map(x=>x.hakbun));
+  const res={add:0,upd:0,noname:0,notInFile:r.students.filter(s=>!inFile.has(String(s.hakbun))).length};
   for(const x of list){
-    if(!x.name)noname++;
+    if(!x.name)res.noname++;
     const ex=r.students.find(s=>String(s.hakbun)===x.hakbun);
-    if(ex){if(x.name&&ex.name!==x.name){ex.name=x.name;upd++;}}
-    else{r.students.push({id:uid(),hakbun:x.hakbun,name:x.name});add++;}
+    if(ex){if(x.name&&ex.name!==x.name){ex.name=x.name;res.upd++;}}
+    else{r.students.push({id:uid(),hakbun:x.hakbun,name:x.name});res.add++;}
+  }
+  return res;
+}
+function mergeMsg(r,m){
+  return `'${r.name}' 명단: 추가 ${m.add}명 · 이름 갱신 ${m.upd}명${m.notInFile?`\n  엑셀에 없는 기존 학생 ${m.notInFile}명은 그대로 둠(필요하면 직접 삭제)`:''}${m.noname?`\n  이름 칸이 빈 학생 ${m.noname}명은 이름 없이 들어감(직접 입력)`:''}`;
+}
+/* 명단 카드 안의 버튼: 이 명단에 가져오기 */
+async function neisRoster(rid){
+  const file=await pickFile('.xlsx');if(!file)return;
+  let X;try{X=await openXlsx(file);}catch(e){alert(e.message);return;}
+  const list=rosterListFromX(X);
+  if(!list.length){alert('학생 명단을 찾지 못했습니다.\n학년·반·번호·성명 칸이 있는 나이스 엑셀(.xlsx)인지 확인해 주세요.');return;}
+  const r=roster(rid);
+  if(!confirm(`${X.title?`'${X.title}' `:''}엑셀에서 학생 ${list.length}명을 찾았습니다.\n'${r.name}' 명단에 넣을까요?`))return;
+  const m=mergeStudents(r,list);
+  touch();render();alert(mergeMsg(r,m));
+}
+/* 명단 관리 상자: 엑셀 여러 개를 놓으면 명단 카드 자동 생성 + 영역 자동 연결 */
+function pickFiles(accept){
+  return new Promise(res=>{
+    const i=document.createElement('input');i.type='file';i.accept=accept;i.multiple=true;
+    i.onchange=()=>res([...i.files]);i.click();
+  });
+}
+function classifyX(X,list,fileName){
+  // 반 이름: 제목의 '2-1' 또는 학생들이 모두 같은 반이면 그 반
+  const cls=new Set(list.map(x=>`${+x.hakbun[0]}-${+x.hakbun.slice(1,3)}`));
+  const oneCls=cls.size===1?[...cls][0]:'';
+  if(X.titleKind==='club') return {kind:'club',name:X.title||fileName,label:X.title};
+  if(X.titleKind==='subject'){
+    const m=/^(.*?)\s*(\d)\s*학년\s*(\d+\s*-\s*\d+)?/.exec(X.title);
+    const subj=(m?m[1]:X.title).trim(), c=(m&&m[3]?m[3].replace(/\s/g,''):'')||oneCls;
+    if(/자율/.test(subj)) return {kind:'home',name:c||X.title,label:X.title};
+    return {kind:'subject',subject:subj,name:c||X.title,label:X.title};
+  }
+  return {kind:'other',name:oneCls||fileName.replace(/\.xlsx$/i,''),label:fileName};
+}
+function linkSingle(a,rid,notes){
+  if(!a) return;
+  if(!a.rosterIds.length||!a.rosterIds.some(id=>roster(id))){a.rosterIds=[rid];notes.push(`${a.name} ← 연결`);}
+  else if(a.rosterIds[0]!==rid) notes.push(`${a.name}: 이미 '${roster(a.rosterIds[0])?.name}' 명단이 연결돼 있어 그대로 둠`);
+}
+async function importRosterFiles(files){
+  if(!DB)return;
+  files=files.filter(f=>/\.xlsx$/i.test(f.name));
+  if(!files.length){alert('나이스에서 내려받은 엑셀(.xlsx) 파일을 놓아 주세요.');return;}
+  const report=[];
+  for(const f of files){
+    let X;try{X=await openXlsx(f);}catch(e){report.push(`❌ ${f.name}: ${e.message.split('\n')[0]}`);continue;}
+    const list=rosterListFromX(X);
+    if(!list.length){report.push(`❌ ${f.name}: 학년·반·번호를 찾지 못함`);continue;}
+    const c=classifyX(X,list,f.name);
+    let r=DB.rosters.find(x=>x.name===c.name), isNew=false;
+    if(r&&!confirm(`[${c.label||f.name}] 학생 ${list.length}명\n\n같은 이름의 '${r.name}' 명단이 이미 있습니다.\n기존 명단에 반영할까요?\n(취소를 누르면 새 명단을 만듭니다)`)) r=null;
+    if(!r){
+      let nm=c.name,k=2;while(DB.rosters.some(x=>x.name===nm))nm=`${c.name} (${k++})`;
+      r={id:uid(),name:nm,students:[]};DB.rosters.push(r);isNew=true;
+    }
+    const m=mergeStudents(r,list), notes=[];
+    if(c.kind==='subject'){
+      let a=DB.areas.find(x=>x.type==='subject'&&normH(x.name)===normH(c.subject));
+      if(!a){a={id:uid(),type:'subject',name:c.subject,rosterIds:[],acts:[],limit:1500};DB.areas.push(a);notes.push(`'${c.subject}' 과목 영역 새로 만듦`);}
+      if(!a.rosterIds.includes(r.id)){a.rosterIds.push(r.id);notes.push(`${a.name} ← 연결`);}
+    }else if(c.kind==='home'){
+      for(const a of DB.areas.filter(x=>(x.type==='activity'&&/자율|진로/.test(x.name))||x.type==='single')) linkSingle(a,r.id,notes);
+    }else if(c.kind==='club'){
+      linkSingle(DB.areas.find(x=>x.type==='activity'&&/동아리/.test(x.name)),r.id,notes);
+    }
+    const kindL={subject:'수업반',home:'담임반',club:'동아리',other:'명단'}[c.kind];
+    report.push(`✅ [${kindL}] ${isNew?'새 명단 ':''}${mergeMsg(r,m)}${notes.length?`\n  영역: ${notes.join(' / ')}`:''}`);
   }
   touch();render();
-  alert(`'${r.name}' 명단: 추가 ${add}명 · 이름 갱신 ${upd}명${noname?`\n이름 칸이 비어 있는 학생 ${noname}명은 이름 없이 들어갔습니다. 아래 표에서 직접 입력해 주세요.`:''}`);
+  alert(`명단 가져오기 결과 (${files.length}개 파일)\n\n${report.join('\n\n')}\n\n과목 영역의 활동 목록은 ② 영역 관리에서 넣어 주세요.`);
 }
 
 /* ================= 암호화 ================= */
@@ -1257,13 +1354,22 @@ async function saveFile(saveAs,silent){
 /* 끌어다 놓기로 열기 */
 let dragDepth=0;
 const isFileDrag=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
-window.addEventListener('dragenter',e=>{if(!isFileDrag(e))return;e.preventDefault();dragDepth++;$('#dropOverlay').classList.add('show');});
+window.addEventListener('dragenter',e=>{if(!isFileDrag(e))return;e.preventDefault();dragDepth++;
+  $('#dropOverlay div').textContent=DB&&UI.tab==='settings'?'📂 나이스 엑셀(.xlsx)은 명단으로, 저장 파일(.json)은 열기':'📂 여기에 놓으면 파일을 엽니다';
+  $('#dropOverlay').classList.add('show');document.body.classList.add('dragging');});
 window.addEventListener('dragover',e=>{if(!isFileDrag(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy';});
-window.addEventListener('dragleave',e=>{if(!isFileDrag(e))return;dragDepth=Math.max(0,dragDepth-1);if(!dragDepth)$('#dropOverlay').classList.remove('show');});
+window.addEventListener('dragleave',e=>{if(!isFileDrag(e))return;dragDepth=Math.max(0,dragDepth-1);if(!dragDepth){$('#dropOverlay').classList.remove('show');document.body.classList.remove('dragging');}});
 window.addEventListener('drop',async e=>{
   if(!isFileDrag(e))return;
-  e.preventDefault();dragDepth=0;$('#dropOverlay').classList.remove('show');
+  e.preventDefault();dragDepth=0;$('#dropOverlay').classList.remove('show');document.body.classList.remove('dragging');
   const items=[...e.dataTransfer.items].filter(i=>i.kind==='file');
+  const allFiles=[...e.dataTransfer.files];
+  if(allFiles.some(f=>/\.xlsx?$/i.test(f.name))){
+    if(!DB){alert('먼저 새 학년도 파일을 만들거나 저장 파일(.json)을 열어 주세요.');return;}
+    if(UI.tab!=='settings'){alert('명단 엑셀은 ⚙️ 설정 탭의 명단 관리에 놓아 주세요.\n(나이스 업로드 양식은 각 탭의 [📤 나이스 양식 채우기] 버튼을 쓰세요)');return;}
+    if(allFiles.some(f=>/\.xls$/i.test(f.name))) alert('.xls 파일은 읽을 수 없습니다. 엑셀에서 .xlsx로 다시 저장해 주세요. (.xlsx 파일만 처리합니다)');
+    importRosterFiles(allFiles);return;
+  }
   if(items.length!==1){alert('파일을 하나만 끌어다 놓아 주세요.');return;}
   const item=items[0];
   const hp=item.getAsFileSystemHandle?item.getAsFileSystemHandle().catch(()=>null):Promise.resolve(null); // drop 직후에 바로 요청해야 함

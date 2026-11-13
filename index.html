@@ -367,7 +367,7 @@ function renderWelcome(){
 
 /* ---------- 설정 화면 ---------- */
 function renderSettings(){
-  let h=`<div class="guide"><b>사용 순서</b> ① 명단 만들기(나이스 출석부 엑셀 놓기 또는 학번·이름 붙여넣기) → ② 영역마다 명단 연결·활동 입력 → ③ 각 탭의 <b>✏️ 활동 입력</b>에서 작성 → 학생 확인용 인쇄 → 체크 → ④ <b>📋 병합</b>에서 최종 다듬고 나이스에 복사</div>`;
+  let h=`<div class="guide"><b>사용 순서</b> ① 명단 만들기(나이스 학생부 엑셀 놓기 또는 학번·이름 붙여넣기) → ② 영역마다 명단 연결·활동 입력 → ③ 각 탭의 <b>✏️ 활동 입력</b>에서 작성 → 학생 확인용 인쇄 → 체크 → ④ <b>📋 병합</b>에서 최종 다듬고 나이스에 복사</div>`;
 
   h+=`<section class="sec"><div class="sec-h"><h2>기본 정보</h2></div>
     <div class="card"><div class="card-b"><div class="row">
@@ -384,10 +384,13 @@ function renderSettings(){
   h+=`<section class="sec"><div class="sec-h"><h2>① 명단 관리</h2><span class="spacer"></span><button class="pri" onclick="addRoster()">+ 명단 추가</button></div>
     <div class="rdrop" onclick="pickFiles('.xlsx').then(importRosterFiles)">
       <div class="rdrop-t">📂 나이스 엑셀을 여기에 끌어다 놓거나 <u>클릭해서 고르세요</u> <span class="muted">(여러 개 한 번에 가능)</span></div>
-      <div class="rdrop-d">명단 카드가 자동으로 만들어지고 영역에도 연결됩니다 — 수업반은 과목 영역, 담임반은 자율·진로·행발, 동아리는 동아리 영역<br>
-      · <b>수업반</b>: 교과담임 → 출결관리 → 교과시간별출석부출력 → 교과목 선택 → 조회 → 엑셀 다운로드<br>
-      · <b>담임반</b>: 같은 메뉴에서 교과목을 <b>자율·자치활동</b>으로 선택<br>
-      · <b>동아리</b>: 동아리담임 → 동아리활동관리 → 동아리활동 출결관리 → 출석부 출력 → 엑셀 다운로드</div>
+      <div class="rdrop-d">나이스 <b>학생부 업로드용 엑셀</b>을 놓으면 명단 카드가 자동으로 만들어지고 영역에도 연결됩니다 — 교과는 과목 영역, 자율·진로·행발은 담임반, 동아리는 동아리 영역<br>
+      · <b>교과</b>: 교과담임 → 성적처리 → 과목별세부능력및특기사항 → 2차인증 → 과목 → 조회 → 엑셀내려받기<br>
+      · <b>자율</b>: 학급담임 → 자율자치활동(자율활동)관리 → 학생부자료기록 → 엑셀내려받기<br>
+      · <b>진로</b>: 학급담임 → 진로활동관리 → 학생부자료기록 → 엑셀내려받기<br>
+      · <b>행발</b>: 학급담임 → 행동특성및종합의견 → 학생부자료기록 → 엑셀내려받기<br>
+      · <b>동아리</b>: 동아리담임 → 창의적체험활동 → 동아리활동관리 → 동아리활동관리 → 학생부자료기록 → 엑셀내려받기<br>
+      <b style="color:var(--text)">※ 받은 파일은 지우지 말고 보관했다가, 각 탭의 [📤 나이스 양식 채우기]에 다시 쓰세요.</b> 명단이 바뀌었으면(전학·번호 변경) 업로드 직전에 다시 받으세요.</div>
     </div>
     <div class="hint">직접 만들려면 [+ 명단 추가] 후 엑셀에서 <b>학번 | 이름</b> 두 열을 복사해 붙여넣으세요. 같은 학번은 기존 작성 내용을 유지한 채 이름만 갱신됩니다.</div>`;
   if(!DB.rosters.length) h+=`<div class="empty">아직 명단이 없습니다. 위 상자에 나이스 엑셀을 놓거나 [+ 명단 추가]를 눌러 시작하세요.</div>`;
@@ -1143,10 +1146,9 @@ function mergeStudents(r,list){
   const inFile=new Set(list.map(x=>x.hakbun));
   const res={add:0,upd:0,noname:0,notInFile:r.students.filter(s=>!inFile.has(String(s.hakbun))).length};
   for(const x of list){
-    if(!x.name)res.noname++;
     const ex=r.students.find(s=>String(s.hakbun)===x.hakbun);
-    if(ex){if(x.name&&ex.name!==x.name){ex.name=x.name;res.upd++;}}
-    else{r.students.push({id:uid(),hakbun:x.hakbun,name:x.name});res.add++;}
+    if(ex){if(x.name&&ex.name!==x.name){ex.name=x.name;res.upd++;}if(!ex.name)res.noname++;}
+    else{r.students.push({id:uid(),hakbun:x.hakbun,name:x.name});res.add++;if(!x.name)res.noname++;}
   }
   return res;
 }
@@ -1175,6 +1177,15 @@ function classifyX(X,list,fileName){
   // 반 이름: 제목의 '2-1' 또는 학생들이 모두 같은 반이면 그 반
   const cls=new Set(list.map(x=>`${+x.hakbun[0]}-${+x.hakbun.slice(1,3)}`));
   const oneCls=cls.size===1?[...cls][0]:'';
+  // 1) 나이스 생기부 업로드 양식(학생부자료기록 엑셀): 칸 이름으로 종류 판단
+  const H=X.header, r1=X.data.find(r=>rowKey(X,r));
+  const v=h=>r1&&H[h]?String(X.cellVal(r1.cells[H[h]])||'').trim():'';
+  const dept=v('동아리활동부서명'), subj0=v('과목'), kind0=v('영역구분');
+  if(dept) return {kind:'club',name:dept,label:dept};
+  if(subj0) return {kind:'subject',subject:subj0,name:oneCls||fileName,label:`${subj0} ${oneCls}`};
+  if(/자율|진로|행동특성/.test(kind0)) return {kind:'home',name:oneCls||fileName,label:`${kind0.replace(/_.*/,'')} ${oneCls}`};
+  if(/동아리/.test(kind0)) return {kind:'club',name:(X.sheetName||fileName).replace(/\s*_?특기사항.*$/,'').trim(),label:kind0};
+  // 2) 출석부 엑셀: 제목 줄로 판단
   if(X.titleKind==='club') return {kind:'club',name:X.title||fileName,label:X.title};
   if(X.titleKind==='subject'){
     const m=/^(.*?)\s*(\d)\s*학년\s*(\d+\s*-\s*\d+)?/.exec(X.title);
@@ -1200,7 +1211,8 @@ async function importRosterFiles(files){
     if(!list.length){report.push(`❌ ${f.name}: 학년·반·번호를 찾지 못함`);continue;}
     const c=classifyX(X,list,f.name);
     let r=DB.rosters.find(x=>x.name===c.name), isNew=false;
-    if(r&&!confirm(`[${c.label||f.name}] 학생 ${list.length}명\n\n같은 이름의 '${r.name}' 명단이 이미 있습니다.\n기존 명단에 반영할까요?\n(취소를 누르면 새 명단을 만듭니다)`)) r=null;
+    const sameSet=r&&r.students.length===list.length&&list.every(x=>r.students.some(s=>String(s.hakbun)===x.hakbun));
+    if(r&&!sameSet&&!confirm(`[${c.label||f.name}] 학생 ${list.length}명\n\n같은 이름의 '${r.name}' 명단이 이미 있습니다.\n기존 명단에 반영할까요?\n(취소를 누르면 새 명단을 만듭니다)`)) r=null;
     if(!r){
       let nm=c.name,k=2;while(DB.rosters.some(x=>x.name===nm))nm=`${c.name} (${k++})`;
       r={id:uid(),name:nm,students:[]};DB.rosters.push(r);isNew=true;
